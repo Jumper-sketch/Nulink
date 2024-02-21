@@ -249,7 +249,8 @@ if __name__ == "__main__":
 
     private_key_main = file_manager.get_private_key_main_from_file(
         "config/private_main.txt"
-    )
+    )[0]
+
     while True:
         log.info("1. Create wallets")
         log.info("2. Delete new wallets")
