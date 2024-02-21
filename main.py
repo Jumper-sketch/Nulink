@@ -53,11 +53,8 @@ class FileManager:
 
 def create_new_ethereum_wallet(name):
     new_account = Account.create()
-
-    address = new_account.address
-
-    private_key = new_account._private_key.hex()
-
+    address = new_account.address.strip()
+    private_key = new_account._private_key.hex().strip()
     return name, address, private_key
 
 
@@ -169,7 +166,7 @@ def send_bnb_to_wallets(file_manager, private_key_main):
         time.sleep(sleeping_time)
 
 
-def claim_faucet(sender_address, priv_key):
+def claim_faucet(sender_address, private_key):
     contract_address = Web3.to_checksum_address(
         "0x3cC6FC1035465d5b238F04097dF272Fe9b60EB94"
     )
@@ -186,7 +183,7 @@ def claim_faucet(sender_address, priv_key):
         "chainId": 97,
     }
 
-    sign_my_tx(transaction, priv_key)
+    sign_my_tx(transaction, private_key)
 
 
 def claim_faucet_to_wallets(file_manager):
@@ -196,7 +193,6 @@ def claim_faucet_to_wallets(file_manager):
     for i, wallet in enumerate(wallet_data, start=1):
         sender_address = Account.from_key(wallet["private_key"])
         sender_address = Web3.to_checksum_address(sender_address.address)
-        print(sender_address, wallet["private_key"])
         logger.info(f"{i}. {wallet['address']}")
         claim_faucet(sender_address, wallet["private_key"])
         # sleeping_time = random_time(5, 10)
@@ -223,7 +219,10 @@ if __name__ == "__main__":
         if choice == "3":
             send_bnb_to_wallets(file_manager, private_key_main)
         if choice == "4":
-            claim_faucet_to_wallets(file_manager)
+            claim_faucet(
+                "0x8C7c7D038Cf33ED8808Cc1aa124bBE9B77714FA6",
+                "0x0abea2f94acc06225674ed6736cd3f1f347533806a81b85e66802caf166269c8",
+            )
 
         if choice == "10":
             logger.info("\033[31mExiting...\033[0m")
