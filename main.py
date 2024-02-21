@@ -1,8 +1,9 @@
 from eth_account import Account
-from loguru import logger
+from loguru import logger as log
 from web3 import Web3
 import time
 import random
+import sys
 
 
 web3 = Web3(Web3.HTTPProvider("https://bsc-testnet.publicnode.com"))
@@ -78,7 +79,7 @@ def sign_my_tx(my_tx, private_key):
         )
         return signed_transaction
     except Exception as e:
-        logger.error(f"Error signing transaction: {e}")
+        log.error(f"Error signing transaction: {e}")
         return None
 
 
@@ -98,20 +99,20 @@ def send_bnb(private_key, address_to, amount):
     if signed_tx is not None:
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            logger.info(f"Transaction hash: {tx_hash.hex()}")
+            log.info(f"Transaction hash: {tx_hash.hex()}")
             return tx_hash.hex()
         except Exception as e:
-            logger.error(f"Transaction failed: {str(e)}")
+            log.error(f"Transaction failed: {str(e)}")
             return False
     else:
-        logger.error("Transaction signing failed.")
+        log.error("Transaction signing failed.")
         return False
 
 
 def create_wallets(file_manager):
     existing_lines = file_manager.count_lines_in_file()
 
-    logger.info("How many wallets do you need?:")
+    log.info("How many wallets do you need?:")
     try:
         input_range = int(input())
         if input_range < 1 or input_range > 100:
@@ -126,22 +127,22 @@ def create_wallets(file_manager):
                 new_wallet_address,
                 new_wallet_private_key,
             )
-        logger.info(f"{input_range} wallets created successfully.")
+        log.info(f"{input_range} wallets created successfully.")
     except ValueError as e:
-        logger.error(f"Invalid input: {e}")
+        log.error(f"Invalid input: {e}")
 
 
 def delete_wallets(file_manager):
     confirm_delete = input("Are you sure you want to delete the wallets file? (y/n): ")
-    logger.info(f"Confirm delete: {confirm_delete}")
+    log.info(f"Confirm delete: {confirm_delete}")
 
     if confirm_delete.lower() == "y":
-        logger.info("User confirmed deletion.")
+        log.info("User confirmed deletion.")
         file_manager.clear_file()
     elif confirm_delete.lower() == "n":
-        logger.info("User cancelled deletion.")
+        log.info("User cancelled deletion.")
     else:
-        logger.warning("Invalid input. Please enter 'y' or 'n'.")
+        log.warning("Invalid input. Please enter 'y' or 'n'.")
 
 
 def send_bnb_to_wallets(file_manager, private_key_main):
@@ -152,15 +153,15 @@ def send_bnb_to_wallets(file_manager, private_key_main):
         if amount <= 0:
             raise ValueError("Amount must be a positive number")
     except ValueError:
-        logger.error("Invalid amount. Please enter a valid number.")
+        log.error("Invalid amount. Please enter a valid number.")
         return
 
     for i, wallet in enumerate(wallet_data, start=1):
         amount_wei = Web3.to_wei(amount, "ether")
-        logger.info(f"{i}. {wallet['address']}")
+        log.info(f"{i}. {wallet['address']}")
         send_bnb(private_key_main, wallet["address"], amount_wei)
         sleeping_time = random_time(5, 10)
-        logger.info(f"Wait {sleeping_time} second")
+        log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
 
@@ -188,13 +189,13 @@ def claim_faucet(sender_address, private_key):
     if signed_tx is not None:
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            logger.info(f"Transaction hash: {tx_hash.hex()}")
+            log.info(f"Transaction hash: {tx_hash.hex()}")
             return tx_hash.hex()
         except Exception as e:
-            logger.error(f"Transaction failed: {str(e)}")
+            log.error(f"Transaction failed: {str(e)}")
             return False
     else:
-        logger.error("Transaction signing failed.")
+        log.error("Transaction signing failed.")
         return False
 
 
@@ -203,23 +204,24 @@ def claim_faucet_to_wallets(file_manager):
     wallet_data = file_manager.get_all_wallet_data_from_file()
 
     for i, wallet in enumerate(wallet_data, start=1):
-        logger.info(f"{i}. {wallet['address']}")
+        log.info(f"{i}. {wallet['address']}")
         claim_faucet(wallet["address"], wallet["private_key"])
         sleeping_time = random_time(5, 10)
-        logger.info(f"Wait {sleeping_time} second")
+        log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
 
 if __name__ == "__main__":
+
     file_manager = FileManager("ethereum_wallet.txt")
 
     private_key_main = file_manager.get_private_key_main_from_file("private_main.txt")
     while True:
-        logger.info("\033[32m1. Create wallets\033[0m")
-        logger.info("2. Delete new wallets")
-        logger.info("3. Send BNB to new wallets from main")
-        logger.info("4. Claim tokens Nulink")
-        logger.info("\033[31m10. Exit\033[0m")
+        log.info("\033[32m1. Create wallets\033[0m")
+        log.info("2. Delete new wallets")
+        log.info("3. Send BNB to new wallets from main")
+        log.info("4. Claim tokens Nulink")
+        log.info("\033[31m10. Exit\033[0m")
         choice = input("Enter your choice: ")
 
         if choice == "1":
@@ -232,7 +234,7 @@ if __name__ == "__main__":
             claim_faucet_to_wallets(file_manager)
 
         if choice == "10":
-            logger.info("\033[31mExiting...\033[0m")
+            log.info("\033[31mExiting...\033[0m")
             break
         else:
             break
