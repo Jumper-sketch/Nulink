@@ -1,0 +1,60 @@
+[
+    {
+        "inputs": [
+            {"internalType": "address", "name": "operator", "type": "address"},
+            {"internalType": "address", "name": "beneficiary", "type": "address"},
+            {"internalType": "address", "name": "authorizer", "type": "address"},
+            {"internalType": "uint96", "name": "amount", "type": "uint96"}
+        ],
+        "name": "stake",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"internalType": "address", "name": "to", "type": "address"}
+        ],
+        "name": "claimReward",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "name": "checkAvailableRewards",
+        "inputs": [{"type": "address", "name": "account"}],
+        "outputs": [{"type": "uint256", "name": "balance"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "name": "balanceOf",
+        "inputs": [{"type": "address", "name": "account"}],
+        "outputs": [{"type": "uint256", "name": "balance"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "name": "userInfo",
+        "inputs": [{"type": "address", "name": "user"}],
+        "outputs": [
+            {"type": "uint256", "name": "amount"},
+            {"type": "uint256", "name": "rewardDebt"}
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "type": "function",
+        "name": "calcUserReward",
+        "inputs": [{"type": "address", "name": "user"}],
+        "outputs": [{"type": "uint256", "name": "reward"}],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "pendingUserReward",
+        "inputs": [{"type": "address"}],
+        "outputs": [{"type": "uint256"}]
+    }
+]

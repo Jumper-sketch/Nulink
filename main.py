@@ -4,6 +4,7 @@ from web3 import Web3
 import time
 import random
 import sys
+import json
 
 
 web3 = Web3(Web3.HTTPProvider("https://bsc-testnet.publicnode.com"))
@@ -49,7 +50,7 @@ class FileManager:
 
     def get_private_key_main_from_file(self, filename):
         with open(filename, "r") as file:
-            return file.readline().strip()
+            return [line.strip() for line in file if line.strip()]
 
 
 def create_new_ethereum_wallet(name):
@@ -166,9 +167,9 @@ def send_bnb_to_wallets(file_manager, private_key_main):
 
 
 def claim_faucet(sender_address, private_key):
-    contract_address = Web3.to_checksum_address(
-        "0x3cC6FC1035465d5b238F04097dF272Fe9b60EB94"
-    )
+    with open("abi/contracts.json", "r") as json_file:
+        data = json.load(json_file)
+    contract_address = data["contract_address"]
 
     sender_address = Account.from_key(private_key)
     sender_address = Web3.to_checksum_address(sender_address.address)
@@ -211,16 +212,46 @@ def claim_faucet_to_wallets(file_manager):
         time.sleep(sleeping_time)
 
 
+def get_pending_user_reward(sender_address):
+    with open("abi/contracts.json", "r") as json_file:
+        data = json.load(json_file)
+    with open("abi/nulink.json", "r") as file:
+        nulink_abi = json.load(file)
+
+    stake_contract_address = data["stake_contract_address"]
+    stake_contract = web3.eth.contract(address=stake_contract_address, abi=nulink_abi)
+
+    try:
+        pending_reward = stake_contract.functions.pendingUserReward(
+            sender_address
+        ).call()
+        pending_reward = Web3.from_wei(pending_reward, "ether")
+        pending_reward_rounded = round(pending_reward, 2)
+        return pending_reward_rounded
+    except Exception as e:
+        return None
+
+
+def get_pending_user_reward_wallets(file_manager):
+    wallet_data = file_manager.get_private_key_main_from_file("private_nulink.txt")
+    for private_key in wallet_data:
+        sender_address = Account.from_key(private_key)
+        sender_address = Web3.to_checksum_address(sender_address.address)
+        rewards = get_pending_user_reward(sender_address)
+        log.info(f"Rewards {sender_address} {rewards} Nulink")
+
+
 if __name__ == "__main__":
 
     file_manager = FileManager("ethereum_wallet.txt")
 
-    private_key_main = file_manager.get_private_key_main_from_file("private_main.txt")
+    private_key_main = file_manager.get_private_key_main_from_file("private_nulink.txt")
     while True:
-        log.info("\033[32m1. Create wallets\033[0m")
+        log.info("1. Create wallets")
         log.info("2. Delete new wallets")
         log.info("3. Send BNB to new wallets from main")
         log.info("4. Claim tokens Nulink")
+        log.info("5. Staking rewards Node")
         log.info("\033[31m10. Exit\033[0m")
         choice = input("Enter your choice: ")
 
@@ -232,6 +263,8 @@ if __name__ == "__main__":
             send_bnb_to_wallets(file_manager, private_key_main)
         if choice == "4":
             claim_faucet_to_wallets(file_manager)
+        if choice == "5":
+            get_pending_user_reward_wallets(file_manager)
 
         if choice == "10":
             log.info("\033[31mExiting...\033[0m")
