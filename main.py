@@ -64,23 +64,21 @@ def random_time(min, max):
 
 def sign_my_tx(my_tx, private_key):
     try:
-        # Update transaction with gas limit and gas price if they are not provided
-        if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
-            my_tx["gas"] = web3.eth.estimate_gas(my_tx)
-            my_tx["gasPrice"] = web3.eth.gas_price
+        gas_limit = int(
+            web3.eth.estimate_gas(my_tx) * (1 + random.randint(1, 100) / 100)
+        )
+        gas_price = int(web3.eth.gas_price * (1 + random.randint(1, 100) / 100))
 
-        # Sign the transaction
+        if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
+            my_tx["gas"] = gas_limit
+            my_tx["gasPrice"] = gas_price
+
         signed_transaction = web3.eth.account.sign_transaction(
             my_tx, private_key=private_key
         )
-
-        # Return the signed transaction
         return signed_transaction
     except Exception as e:
-        # Handle errors and return None
-        logger.error(f"Error: {e}")
-        if "429" in str(e):  # Retry if the error is due to API limit
-            return sign_my_tx(my_tx, private_key)
+        logger.error(f"Error signing transaction: {e}")
         return None
 
 
@@ -166,13 +164,16 @@ def send_bnb_to_wallets(file_manager, private_key_main):
         time.sleep(sleeping_time)
 
 
-def claim_faucet(sender_address, priv_key):
+def claim_faucet(sender_address, private_key):
     contract_address = Web3.to_checksum_address(
         "0x3cC6FC1035465d5b238F04097dF272Fe9b60EB94"
     )
 
+    sender_address = Account.from_key(private_key)
+    sender_address = Web3.to_checksum_address(sender_address.address)
+
     data_to_send = f"0xee42b5c7000000000000000000000000{sender_address[2:].lower()}000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000001300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013000000000000000000000000000000000000000000000000000000000000000"
-    transaction = {
+    transaction_faucet = {
         "from": sender_address,
         "to": contract_address,
         "value": 0,
@@ -183,7 +184,18 @@ def claim_faucet(sender_address, priv_key):
         "chainId": 97,
     }
 
-    sign_my_tx(transaction, priv_key)
+    signed_tx = sign_my_tx(transaction_faucet, private_key)
+    if signed_tx is not None:
+        try:
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            logger.info(f"Transaction hash: {tx_hash.hex()}")
+            return tx_hash.hex()
+        except Exception as e:
+            logger.error(f"Transaction failed: {str(e)}")
+            return False
+    else:
+        logger.error("Transaction signing failed.")
+        return False
 
 
 def claim_faucet_to_wallets(file_manager):
@@ -191,13 +203,11 @@ def claim_faucet_to_wallets(file_manager):
     wallet_data = file_manager.get_all_wallet_data_from_file()
 
     for i, wallet in enumerate(wallet_data, start=1):
-        sender_address = Account.from_key(wallet["private_key"])
-        sender_address = Web3.to_checksum_address(sender_address.address)
         logger.info(f"{i}. {wallet['address']}")
-        claim_faucet(sender_address, wallet["private_key"])
-        # sleeping_time = random_time(5, 10)
-        # logger.info(f"Wait {sleeping_time} second")
-        # time.sleep(sleeping_time)
+        claim_faucet(wallet["address"], wallet["private_key"])
+        sleeping_time = random_time(5, 10)
+        logger.info(f"Wait {sleeping_time} second")
+        time.sleep(sleeping_time)
 
 
 if __name__ == "__main__":
@@ -219,10 +229,7 @@ if __name__ == "__main__":
         if choice == "3":
             send_bnb_to_wallets(file_manager, private_key_main)
         if choice == "4":
-            claim_faucet(
-                "0x8C7c7D038Cf33ED8808Cc1aa124bBE9B77714FA6",
-                "0x0abea2f94acc06225674ed6736cd3f1f347533806a81b85e66802caf166269c8",
-            )
+            claim_faucet_to_wallets(file_manager)
 
         if choice == "10":
             logger.info("\033[31mExiting...\033[0m")
