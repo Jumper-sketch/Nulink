@@ -233,7 +233,9 @@ def get_pending_user_reward(sender_address):
 
 
 def get_pending_user_reward_wallets(file_manager):
-    wallet_data = file_manager.get_private_key_main_from_file("private_nulink.txt")
+    wallet_data = file_manager.get_private_key_main_from_file(
+        "config/private_nulink.txt"
+    )
     for private_key in wallet_data:
         sender_address = Account.from_key(private_key)
         sender_address = Web3.to_checksum_address(sender_address.address)
@@ -243,9 +245,11 @@ def get_pending_user_reward_wallets(file_manager):
 
 if __name__ == "__main__":
 
-    file_manager = FileManager("ethereum_wallet.txt")
+    file_manager = FileManager("config/ethereum_wallet.txt")
 
-    private_key_main = file_manager.get_private_key_main_from_file("private_nulink.txt")
+    private_key_main = file_manager.get_private_key_main_from_file(
+        "config/private_main.txt"
+    )
     while True:
         log.info("1. Create wallets")
         log.info("2. Delete new wallets")
