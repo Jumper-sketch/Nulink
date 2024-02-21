@@ -116,7 +116,7 @@ def create_wallets(file_manager):
     logger.info("How many wallets do you need?:")
     try:
         input_range = int(input())
-        if input_range <= 0 or input_range > 100:
+        if input_range < 1 or input_range > 100:
             raise ValueError("Number of wallets must be a positive integer or 100 max")
 
         for i in range(existing_lines + 1, existing_lines + input_range + 1):
