@@ -166,7 +166,7 @@ def send_bnb_to_wallets(file_manager, private_key_main):
         time.sleep(sleeping_time)
 
 
-def claim_faucet(sender_address, private_key):
+def claim_faucet(sender_address, priv_key):
     contract_address = Web3.to_checksum_address(
         "0x3cC6FC1035465d5b238F04097dF272Fe9b60EB94"
     )
@@ -183,7 +183,7 @@ def claim_faucet(sender_address, private_key):
         "chainId": 97,
     }
 
-    sign_my_tx(transaction, private_key)
+    sign_my_tx(transaction, priv_key)
 
 
 def claim_faucet_to_wallets(file_manager):
