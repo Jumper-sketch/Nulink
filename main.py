@@ -57,10 +57,6 @@ class FileManager:
                 wallet_data_list.append(wallet_data)
         return wallet_data_list
 
-    def get_private_key_main_from_file(self, filename):
-        with open(filename, "r") as file:
-            return [line.strip() for line in file if line.strip()]
-
 
 def create_new_ethereum_wallet(name):
     new_account = Account.create()
@@ -94,7 +90,7 @@ def sign_my_tx(my_tx, private_key):
 
 
 def send_bnb(private_key, address_to, amount):
-    sender_address = Account.from_key(private_key_main)
+    sender_address = Account.from_key(private_key)
     sender_address = Web3.to_checksum_address(sender_address.address)
     transfer_tx = {
         "to": address_to,
@@ -155,7 +151,7 @@ def delete_wallets(file_manager):
         log.warning("Invalid input. Please enter 'y' or 'n'.")
 
 
-def send_bnb_to_wallets(file_manager, private_key_main):
+def send_bnb_to_wallets(file_manager, private_key):
     wallet_data = file_manager.get_all_wallet_data_from_file()
     amount_str = input("Amount BNB to send: ")
     try:
@@ -169,7 +165,7 @@ def send_bnb_to_wallets(file_manager, private_key_main):
     for i, wallet in enumerate(wallet_data, start=1):
         amount_wei = Web3.to_wei(amount, "ether")
         log.info(f"{i}. {wallet['address']}")
-        send_bnb(private_key_main, wallet["address"], amount_wei)
+        send_bnb(private_key, wallet["address"], amount_wei)
         sleeping_time = random_time(5, 10)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
@@ -387,8 +383,28 @@ def claim_rewards_wallets(file_manager):
         time.sleep(sleeping_time)
 
 
-if __name__ == "__main__":
+def display_menu():
+    log.info("1. Create wallets")
+    log.info("2. Delete new wallets")
+    log.info("3. Send BNB to new wallets from main")
+    log.info("4. Claim tokens Nulink from faucet (1 time)")
+    log.info("5. Rewards Node Checker")
+    log.info("6. Stake Nulink")
+    log.info("7. Claim rewards Node")
+    log.info("\033[31m10. Exit\033[0m")
 
+
+def execute_option(choice, options):
+    if choice in options:
+        options[choice]()
+        if choice == "10":
+            return False
+    else:
+        log.error("Invalid choice. Please enter a valid option.")
+    return True
+
+
+def main():
     file_paths = {
         "ethereum_wallet": "config/ethereum_wallet.txt",
         "private_nulink": "config/private_nulink.txt",
@@ -396,7 +412,6 @@ if __name__ == "__main__":
     }
     file_manager = FileManager(file_paths["ethereum_wallet"])
     nulink_manager = FileManager(file_paths["private_nulink"])
-    main_manager = FileManager(file_paths["private_main"])
 
     private_key_main = FileManager(
         file_paths["private_main"]
@@ -413,18 +428,11 @@ if __name__ == "__main__":
         "10": lambda: log.info("\033[31mExiting...\033[0m"),
     }
     while True:
-        log.info("1. Create wallets")
-        log.info("2. Delete new wallets")
-        log.info("3. Send BNB to new wallets from main")
-        log.info("4. Claim tokens Nulink from faucet (1 time)")
-        log.info("5. Rewards Node Checker")
-        log.info("6. Stake Nulink")
-        log.info("7. Claim rewards Node")
-        log.info("\033[31m10. Exit\033[0m")
-
+        display_menu()
         choice = input("Enter your choice: ")
+        if not execute_option(choice, options):
+            break
 
-        if choice in options:
-            options[choice]()
-            if choice == "10":
-                break
+
+if __name__ == "__main__":
+    main()
