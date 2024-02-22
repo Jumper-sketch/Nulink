@@ -40,11 +40,20 @@ class FileManager:
         with open(self.filename, "r") as file:
             for line in file:
                 parts = line.strip().split(":")
-                wallet_data = {
-                    "name": parts[0],
-                    "address": parts[1],
-                    "private_key": parts[2],
-                }
+                if len(parts) == 3:
+                    wallet_data = {
+                        "name": parts[0],
+                        "address": parts[1],
+                        "private_key": parts[2],
+                    }
+                elif len(parts) == 1:
+                    wallet_data = {
+                        "name": None,
+                        "address": None,
+                        "private_key": parts[0],
+                    }
+                else:
+                    continue
                 wallet_data_list.append(wallet_data)
         return wallet_data_list
 
@@ -171,8 +180,7 @@ def claim_faucet(sender_address, private_key):
         data = json.load(json_file)
     contract_address = data["contract_address"]
 
-    sender_address = Account.from_key(private_key)
-    sender_address = Web3.to_checksum_address(sender_address.address)
+    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
 
     data_to_send = f"0xee42b5c7000000000000000000000000{sender_address[2:].lower()}000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000001300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013000000000000000000000000000000000000000000000000000000000000000"
     transaction_faucet = {
@@ -243,20 +251,107 @@ def get_pending_user_reward_wallets(file_manager):
         log.info(f"Rewards {sender_address} {rewards} Nulink")
 
 
+def get_token_balance(token_address, wallet_address):
+    with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
+        contracts = json.load(contracts)
+    with open("abi/erc20.json", mode="r", encoding="utf-8") as erc20_abi:
+        erc20_abi = json.load(erc20_abi)
+
+    contract_address = Web3.to_checksum_address(token_address)
+
+    contract = web3.eth.contract(address=contract_address, abi=erc20_abi)
+    wallet_address = Web3.to_checksum_address(wallet_address)
+    balance = contract.functions.balanceOf(wallet_address).call()
+
+    return balance
+
+
+def stake(private_key):
+    with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
+        contracts = json.load(contracts)
+    with open("abi/nulink.json", mode="r", encoding="utf-8") as json_file:
+        nulink_abi = json.load(json_file)
+
+    stake_contract_address = contracts["stake_contract_address"]
+    nulink_token_address = contracts["nulink_token_address"]
+
+    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
+    log.info(sender_address)
+
+    stake_contract = web3.eth.contract(address=stake_contract_address, abi=nulink_abi)
+
+    amount = get_token_balance(nulink_token_address, sender_address)
+    amount_nulink = amount / 10**18
+    log.info(f"Staking amount: {amount_nulink}")
+
+    if amount_nulink > 1:
+
+        random_subtract = random.uniform(0.001, 0.1)
+        amount -= int(random_subtract * 10**18)
+        log.info("Subtracted amount: {random_subtract}")
+
+        nonce = web3.eth.get_transaction_count(sender_address)
+
+        stake_tx = stake_contract.functions.stake(
+            sender_address, sender_address, sender_address, amount
+        ).build_transaction(
+            {
+                "from": sender_address,
+                "gas": 0,
+                "nonce": nonce,
+                "gasPrice": 0,
+                "chainId": 97,
+            }
+        )
+        signed_tx = sign_my_tx(stake_tx, private_key)
+        if signed_tx is not None:
+            try:
+                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                log.info(f"Transaction hash: {tx_hash.hex()}")
+                return tx_hash.hex()
+            except Exception as e:
+                log.error(f"Transaction failed: {str(e)}")
+                return False
+        else:
+            log.error("Transaction signing failed.")
+            return False
+    else:
+        log.info(f"Amount Nulink token is: {amount_nulink} NLK. Not need stake")
+
+
+def stake_wallets(file_manager):
+    wallet_data = file_manager.get_all_wallet_data_from_file()
+
+    for i, wallet in enumerate(wallet_data, start=1):
+        # log.info(f"{i}. {wallet['address']}")
+        stake(wallet["private_key"])
+        sleeping_time = random_time(10, 30)
+        log.info(f"Wait {sleeping_time} second")
+        time.sleep(sleeping_time)
+
+
 if __name__ == "__main__":
 
-    file_manager = FileManager("config/ethereum_wallet.txt")
+    file_paths = {
+        "ethereum_wallet": "config/ethereum_wallet.txt",
+        "private_nulink": "config/private_nulink.txt",
+        "private_main": "config/private_main.txt",
+    }
+    file_manager = FileManager(file_paths["ethereum_wallet"])
+    nulink_manager = FileManager(file_paths["private_nulink"])
+    main_manager = FileManager(file_paths["private_main"])
 
-    private_key_main = file_manager.get_private_key_main_from_file(
-        "config/private_main.txt"
-    )[0]
+    private_key_main = FileManager(
+        file_paths["private_main"]
+    ).get_all_wallet_data_from_file()[0]["private_key"]
 
     while True:
         log.info("1. Create wallets")
         log.info("2. Delete new wallets")
         log.info("3. Send BNB to new wallets from main")
         log.info("4. Claim tokens Nulink")
-        log.info("5. Staking rewards Node")
+        log.info("5. Rewards node checker")
+        log.info("6. Stake Nulink")
         log.info("\033[31m10. Exit\033[0m")
         choice = input("Enter your choice: ")
 
@@ -270,6 +365,8 @@ if __name__ == "__main__":
             claim_faucet_to_wallets(file_manager)
         if choice == "5":
             get_pending_user_reward_wallets(file_manager)
+        if choice == "6":
+            stake_wallets(nulink_manager)
 
         if choice == "10":
             log.info("\033[31mExiting...\033[0m")
