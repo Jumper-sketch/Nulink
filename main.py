@@ -84,9 +84,11 @@ def sign_my_tx(my_tx, private_key):
             my_tx, private_key=private_key
         )
         return signed_transaction
-    except Exception as e:
+    except ValueError as e:
         log.error(f"Error signing transaction: {e}")
-        return None
+    except Exception as e:
+        log.error(f"An unexpected error occurred: {e}")
+    return None
 
 
 def send_bnb(private_key, address_to, amount):
