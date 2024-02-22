@@ -220,11 +220,12 @@ def claim_faucet_to_wallets(file_manager):
         time.sleep(sleeping_time)
 
 
-def get_pending_user_reward(sender_address):
+def get_pending_user_reward(private_key):
     with open("abi/contracts.json", "r") as json_file:
         data = json.load(json_file)
     with open("abi/nulink.json", "r") as file:
         nulink_abi = json.load(file)
+    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
 
     stake_contract_address = data["stake_contract_address"]
     stake_contract = web3.eth.contract(address=stake_contract_address, abi=nulink_abi)
@@ -234,21 +235,21 @@ def get_pending_user_reward(sender_address):
             sender_address
         ).call()
         pending_reward = Web3.from_wei(pending_reward, "ether")
-        pending_reward_rounded = round(pending_reward, 2)
+        pending_reward_rounded = round(pending_reward, 3)
         return pending_reward_rounded
     except Exception as e:
         return None
 
 
 def get_pending_user_reward_wallets(file_manager):
-    wallet_data = file_manager.get_private_key_main_from_file(
-        "config/private_nulink.txt"
-    )
-    for private_key in wallet_data:
-        sender_address = Account.from_key(private_key)
-        sender_address = Web3.to_checksum_address(sender_address.address)
-        rewards = get_pending_user_reward(sender_address)
-        log.info(f"Rewards {sender_address} {rewards} Nulink")
+    wallet_data = file_manager.get_all_wallet_data_from_file()
+
+    for i, wallet in enumerate(wallet_data, start=1):
+        rewards = get_pending_user_reward(wallet["private_key"])
+        wallet_address = Web3.to_checksum_address(
+            Account.from_key(wallet["private_key"]).address
+        )
+        log.info(f"{i}. Rewards {wallet_address} {rewards} Nulink")
 
 
 def get_token_balance(token_address, wallet_address):
@@ -323,8 +324,64 @@ def stake_wallets(file_manager):
     wallet_data = file_manager.get_all_wallet_data_from_file()
 
     for i, wallet in enumerate(wallet_data, start=1):
-        # log.info(f"{i}. {wallet['address']}")
+        log.info(f"{i}. {wallet['address']}")
         stake(wallet["private_key"])
+        sleeping_time = random_time(10, 30)
+        log.info(f"Wait {sleeping_time} second")
+        time.sleep(sleeping_time)
+
+
+def claim_rewards(private_key):
+    with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
+        contracts = json.load(contracts)
+    with open("abi/nulink.json", mode="r", encoding="utf-8") as json_file:
+        nulink_abi = json.load(json_file)
+
+    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
+    log.info(sender_address)
+    stake_contract = web3.eth.contract(
+        address=contracts["stake_contract_address"], abi=nulink_abi
+    )
+
+    get_rewards_pending = get_pending_user_reward(sender_address)
+
+    if get_rewards_pending > 1:
+
+        nonce = web3.eth.get_transaction_count(sender_address)
+        claim_tx = stake_contract.functions.claimReward(
+            sender_address
+        ).build_transaction(
+            {
+                "from": sender_address,
+                "gas": 0,
+                "nonce": nonce,
+                "gasPrice": 0,
+                "chainId": 97,
+            }
+        )
+        signed_tx = sign_my_tx(claim_tx, private_key)
+        if signed_tx is not None:
+            try:
+                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                log.info(f"Transaction hash: {tx_hash.hex()}")
+                return tx_hash.hex()
+            except Exception as e:
+                log.error(f"Transaction failed: {str(e)}")
+                return False
+        else:
+            log.error(f"Transaction signing failed.")
+            return False
+    else:
+        log.error(
+            f"\033[93mWallet {sender_address} have only {get_rewards_pending} Nulink. Not need claim now\033[0m",
+        )
+
+
+def claim_rewards_wallets(file_manager):
+    wallet_data = file_manager.get_all_wallet_data_from_file()
+
+    for i, wallet in enumerate(wallet_data, start=1):
+        claim_rewards(wallet["private_key"])
         sleeping_time = random_time(10, 30)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
@@ -345,31 +402,29 @@ if __name__ == "__main__":
         file_paths["private_main"]
     ).get_all_wallet_data_from_file()[0]["private_key"]
 
+    options = {
+        "1": lambda: create_wallets(file_manager),
+        "2": lambda: delete_wallets(file_manager),
+        "3": lambda: send_bnb_to_wallets(file_manager, private_key_main),
+        "4": lambda: claim_faucet_to_wallets(file_manager),
+        "5": lambda: get_pending_user_reward_wallets(nulink_manager),
+        "6": lambda: stake_wallets(nulink_manager),
+        "7": lambda: claim_rewards_wallets(nulink_manager),
+        "10": lambda: log.info("\033[31mExiting...\033[0m"),
+    }
     while True:
         log.info("1. Create wallets")
         log.info("2. Delete new wallets")
         log.info("3. Send BNB to new wallets from main")
-        log.info("4. Claim tokens Nulink")
-        log.info("5. Rewards node checker")
+        log.info("4. Claim tokens Nulink from faucet (1 time)")
+        log.info("5. Rewards Node Checker")
         log.info("6. Stake Nulink")
+        log.info("7. Claim rewards Node")
         log.info("\033[31m10. Exit\033[0m")
+
         choice = input("Enter your choice: ")
 
-        if choice == "1":
-            create_wallets(file_manager)
-        if choice == "2":
-            delete_wallets(file_manager)
-        if choice == "3":
-            send_bnb_to_wallets(file_manager, private_key_main)
-        if choice == "4":
-            claim_faucet_to_wallets(file_manager)
-        if choice == "5":
-            get_pending_user_reward_wallets(file_manager)
-        if choice == "6":
-            stake_wallets(nulink_manager)
-
-        if choice == "10":
-            log.info("\033[31mExiting...\033[0m")
-            break
-        else:
-            break
+        if choice in options:
+            options[choice]()
+            if choice == "10":
+                break
