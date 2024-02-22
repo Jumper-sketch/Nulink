@@ -415,7 +415,12 @@ def main():
 
     private_key_main = FileManager(
         file_paths["private_main"]
-    ).get_all_wallet_data_from_file()[0]["private_key"]
+    ).get_all_wallet_data_from_file()
+
+    if private_key_main:
+        private_key_main = random.choice(private_key_main)["private_key"]
+    else:
+        log.error("Please add main wallet private key")
 
     options = {
         "1": lambda: create_wallets(file_manager),
