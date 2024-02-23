@@ -336,12 +336,11 @@ def claim_rewards(private_key):
         nulink_abi = json.load(json_file)
 
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
-    log.info(sender_address)
     stake_contract = web3.eth.contract(
         address=contracts["stake_contract_address"], abi=nulink_abi
     )
 
-    get_rewards_pending = get_pending_user_reward(sender_address)
+    get_rewards_pending = get_pending_user_reward(private_key)
 
     if get_rewards_pending > 1:
 
