@@ -325,7 +325,7 @@ def stake_wallets(file_manager):
         approve = approve_token_spending(wallet["private_key"])
         if approve:
             log.info("Approve done.")
-            sleeping_time = random_time(5, 10)
+            sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
             if stake_checker:
                 sleeping_time = random_time(10, 30)
