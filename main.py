@@ -270,8 +270,6 @@ def stake(private_key):
         contracts = json.load(contracts)
     with open("abi/nulink.json", mode="r", encoding="utf-8") as json_file:
         nulink_abi = json.load(json_file)
-    with open("abi/erc20.json", mode="r", encoding="utf-8") as erc20_abi:
-        erc20_abi = json.load(json_file)
 
     stake_contract_address = contracts["stake_contract_address"]
     nulink_token_address = contracts["nulink_token_address"]
@@ -286,12 +284,6 @@ def stake(private_key):
     log.info(f"Staking amount: {amount_nulink}")
 
     if amount_nulink > 1:
-        if not approve_token_spending(
-            nulink_token_address, amount, stake_contract_address, private_key
-        ):
-            log.error("Failed to approve token spending")
-            return False
-
         random_subtract = random.uniform(0.001, 0.1)
         amount -= int(random_subtract * 10**18)
         log.info(f"Subtracted amount: {random_subtract}")
@@ -332,7 +324,8 @@ def stake_wallets(file_manager):
     for i, wallet in enumerate(wallet_data, start=1):
         approve = approve_token_spending(wallet["private_key"])
         if approve:
-            log.info("Check approve...")
+            log.info("Approve done.")
+            sleeping_time = random_time(5, 10)
             stake_checker = stake(wallet["private_key"])
             if stake_checker:
                 sleeping_time = random_time(10, 30)
