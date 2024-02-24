@@ -270,6 +270,8 @@ def stake(private_key):
         contracts = json.load(contracts)
     with open("abi/nulink.json", mode="r", encoding="utf-8") as json_file:
         nulink_abi = json.load(json_file)
+    with open("abi/erc20.json", mode="r", encoding="utf-8") as erc20_abi:
+        erc20_abi = json.load(json_file)
 
     stake_contract_address = contracts["stake_contract_address"]
     nulink_token_address = contracts["nulink_token_address"]
@@ -284,6 +286,11 @@ def stake(private_key):
     log.info(f"Staking amount: {amount_nulink}")
 
     if amount_nulink > 1:
+        if not approve_token_spending(
+            nulink_token_address, amount, stake_contract_address, private_key
+        ):
+            log.error("Failed to approve token spending")
+            return False
 
         random_subtract = random.uniform(0.001, 0.1)
         amount -= int(random_subtract * 10**18)
@@ -323,11 +330,14 @@ def stake_wallets(file_manager):
     wallet_data = file_manager.get_all_wallet_data_from_file()
 
     for i, wallet in enumerate(wallet_data, start=1):
-        stake_checker = stake(wallet["private_key"])
-        if stake_checker:
-            sleeping_time = random_time(10, 30)
-            log.info(f"Wait {sleeping_time} second")
-            time.sleep(sleeping_time)
+        approve = approve_token_spending(wallet["private_key"])
+        if approve:
+            log.info("Check approve...")
+            stake_checker = stake(wallet["private_key"])
+            if stake_checker:
+                sleeping_time = random_time(10, 30)
+                log.info(f"Wait {sleeping_time} second")
+                time.sleep(sleeping_time)
 
 
 def claim_rewards(private_key):
@@ -452,6 +462,54 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
             sleeping_time = random_time(10, 60)
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
+
+
+def approve_token_spending(private_key):
+    with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
+        my_contracts = json.load(contracts_file)
+    with open("abi/erc20.json", mode="r", encoding="utf-8") as erc20_abi_file:
+        erc20_abi = json.load(erc20_abi_file)
+
+    spender_address = my_contracts["stake_contract_address"]
+    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
+    contract = web3.eth.contract(
+        address=my_contracts["nulink_token_address"], abi=erc20_abi
+    )
+
+    allowance_amount = contract.functions.allowance(
+        sender_address,
+        spender_address,
+    ).call()
+
+    amount = get_token_balance(my_contracts["nulink_token_address"], sender_address)
+
+    if allowance_amount < amount:
+        nonce = web3.eth.get_transaction_count(sender_address)
+        approve_tx = contract.functions.approve(
+            spender_address, 2**256 - 1
+        ).build_transaction(
+            {
+                "from": sender_address,
+                "gas": 0,
+                "nonce": nonce,
+                "gasPrice": 0,
+                "chainId": 97,
+            }
+        )
+        signed_tx = sign_my_tx(approve_tx, private_key)
+        if signed_tx is not None:
+            try:
+                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                log.info(f"Transaction hash approve: {tx_hash.hex()}")
+                return True
+            except Exception as e:
+                log.error(f"Transaction failed: {str(e)}")
+                return False
+        else:
+            log.error(f"Transaction signing failed.")
+            return False
+    else:
+        return True
 
 
 def display_menu():
