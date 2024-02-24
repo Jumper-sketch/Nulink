@@ -97,8 +97,8 @@ def send_bnb(private_key, address_to, amount):
     transfer_tx = {
         "to": address_to,
         "value": amount,
-        "gas": 21000,
-        "gasPrice": 10000000000,
+        "gas": 0,
+        "gasPrice": 0,
         "nonce": web3.eth.get_transaction_count(sender_address),
         "chainId": 97,
     }
@@ -388,6 +388,72 @@ def claim_rewards_wallets(file_manager):
             time.sleep(sleeping_time)
 
 
+def send_nulink(private_key_sender, address_to_send):
+    with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
+        my_contracts = json.load(contracts_file)
+    with open("abi/erc20.json", mode="r", encoding="utf-8") as erc20_abi_file:
+        erc20_abi = json.load(erc20_abi_file)
+
+    contract = web3.eth.contract(
+        address=my_contracts["nulink_token_address"], abi=erc20_abi
+    )
+    sender_address = Web3.to_checksum_address(
+        Account.from_key(private_key_sender).address
+    )
+    amount = get_token_balance(my_contracts["nulink_token_address"], sender_address)
+    amount_nulink = amount / 10**18
+    if amount > 0:
+        transfer_tx = contract.functions.transfer(address_to_send, amount)(
+            address_to_send, amount
+        ).build_transaction(
+            {
+                "from": sender_address,
+                "gas": 0,
+                "gasPrice": 0,
+                "nonce": web3.eth.get_transaction_count(sender_address),
+                "chainId": 97,
+            }
+        )
+
+        signed_tx = sign_my_tx(transfer_tx, private_key_sender)
+        if signed_tx is not None:
+            try:
+                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+                log.info(f"Transaction hash: {tx_hash.hex()}")
+                return True
+            except Exception as e:
+                log.error(f"Transaction failed: {str(e)}")
+                return False
+        else:
+            log.error("Transaction signing failed.")
+            return False
+    else:
+        log.info(f"\033[91mAmount: {amount_nulink} NLK. Cannot send it\033[0m")
+
+
+def send_nulink_to_wallets(file_manager, nulink_manager):
+    wallet_new_data = file_manager.get_all_wallet_data_from_file()
+    wallet_nulink_data = nulink_manager.get_all_wallet_data_from_file()
+
+    for i, (new_wallet, nulink_wallet) in enumerate(
+        zip(wallet_new_data, wallet_nulink_data), start=1
+    ):
+        nulink_wallet_node = Web3.to_checksum_address(
+            Account.from_key(nulink_wallet["private_key"]).address
+        )
+        new_wallet_bnb = Web3.to_checksum_address(
+            Account.from_key(nulink_wallet["private_key"]).address
+        )
+
+        log.info(f"{i}.Try send from {new_wallet_bnb} to {nulink_wallet_node} 10 NLK")
+
+        send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node)
+        if send_checker:
+            sleeping_time = random_time(5, 10)
+            log.info(f"Wait {sleeping_time} second")
+            time.sleep(sleeping_time)
+
+
 def display_menu():
     log.info("1. Create wallets")
     log.info("2. Delete new wallets")
@@ -396,6 +462,7 @@ def display_menu():
     log.info("5. Rewards Node Checker")
     log.info("6. Stake Nulink")
     log.info("7. Claim rewards Node")
+    log.info("8. Send NLK tokens to Node Wallets")
     log.info("\033[31m10. Exit\033[0m")
 
 
@@ -435,6 +502,7 @@ def main():
         "5": lambda: get_pending_user_reward_wallets(nulink_manager),
         "6": lambda: stake_wallets(nulink_manager),
         "7": lambda: claim_rewards_wallets(nulink_manager),
+        "8": lambda: send_nulink_to_wallets(file_manager, nulink_manager),
         "10": lambda: log.info("\033[31mExiting...\033[0m"),
     }
     while True:
