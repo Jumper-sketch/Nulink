@@ -307,7 +307,7 @@ def stake(private_key):
             try:
                 tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
                 log.info(f"Transaction hash: {tx_hash.hex()}")
-                return tx_hash.hex()
+                return True
             except Exception as e:
                 log.error(f"Transaction failed: {str(e)}")
                 return False
@@ -316,17 +316,18 @@ def stake(private_key):
             return False
     else:
         log.info(f"Amount Nulink token is: {amount_nulink} NLK. Not need stake")
+        return False
 
 
 def stake_wallets(file_manager):
     wallet_data = file_manager.get_all_wallet_data_from_file()
 
     for i, wallet in enumerate(wallet_data, start=1):
-        log.info(f"{i}. {wallet['address']}")
-        stake(wallet["private_key"])
-        sleeping_time = random_time(10, 30)
-        log.info(f"Wait {sleeping_time} second")
-        time.sleep(sleeping_time)
+        stake_checker = stake(wallet["private_key"])
+        if stake_checker:
+            sleeping_time = random_time(10, 30)
+            log.info(f"Wait {sleeping_time} second")
+            time.sleep(sleeping_time)
 
 
 def claim_rewards(private_key):
