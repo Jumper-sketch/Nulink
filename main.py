@@ -449,7 +449,7 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
 
         send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node)
         if send_checker:
-            sleeping_time = random_time(5, 10)
+            sleeping_time = random_time(10, 60)
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
 
