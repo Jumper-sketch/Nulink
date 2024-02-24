@@ -287,7 +287,7 @@ def stake(private_key):
 
         random_subtract = random.uniform(0.001, 0.1)
         amount -= int(random_subtract * 10**18)
-        log.info("Subtracted amount: {random_subtract}")
+        log.info(f"Subtracted amount: {random_subtract}")
 
         nonce = web3.eth.get_transaction_count(sender_address)
 
