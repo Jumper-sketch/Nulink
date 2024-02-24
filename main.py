@@ -372,16 +372,19 @@ def claim_rewards(private_key):
         log.error(
             f"\033[93mWallet {sender_address} have only {get_rewards_pending} Nulink. Not need claim now\033[0m",
         )
+        return False
 
 
 def claim_rewards_wallets(file_manager):
     wallet_data = file_manager.get_all_wallet_data_from_file()
 
     for i, wallet in enumerate(wallet_data, start=1):
-        claim_rewards(wallet["private_key"])
-        sleeping_time = random_time(10, 30)
-        log.info(f"Wait {sleeping_time} second")
-        time.sleep(sleeping_time)
+
+        checker_claim = claim_rewards(wallet["private_key"])
+        if checker_claim:
+            sleeping_time = random_time(10, 30)
+            log.info(f"Wait {sleeping_time} second")
+            time.sleep(sleeping_time)
 
 
 def display_menu():
