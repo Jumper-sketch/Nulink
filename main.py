@@ -444,7 +444,7 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
             Account.from_key(nulink_wallet["private_key"]).address
         )
         new_wallet_bnb = Web3.to_checksum_address(
-            Account.from_key(nulink_wallet["private_key"]).address
+            Account.from_key(new_wallet["private_key"]).address
         )
 
         log.info(f"{i}.Try send from {new_wallet_bnb} to {nulink_wallet_node} 10 NLK")
