@@ -327,7 +327,7 @@ def stake_wallets(file_manager):
             sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
             if stake_checker:
-                sleeping_time = random_time(10, 30)
+                sleeping_time = random_time(20, 60)
                 log.info(f"Wait {sleeping_time} second")
                 time.sleep(sleeping_time)
 
@@ -451,7 +451,7 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
 
         send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node)
         if send_checker:
-            sleeping_time = random_time(25, 65)
+            sleeping_time = random_time(35, 80)
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
 
