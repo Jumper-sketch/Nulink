@@ -40,3 +40,7 @@ This Python script provides functionality for managing Ethereum wallets, interac
 
 - This script is provided as-is and does not guarantee error-free execution.
 - Use it at your own risk and always double-check transactions before confirming them.
+
+## Donate ❤
+
+```0x00d8189F97d05098C522f1e10eeA518116Df9e64```
