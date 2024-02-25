@@ -4,4 +4,4 @@ ethereum_wallet.txt: This file automatically records the scripts for our newly c
 
 private_nulink.txt: Here, we store the private keys provided by Nulink where we have made stakes.
 
-pip install -r requirements.txt: This command installs the necessary Python packages specified in the requirements.txt file.
+```pip install -r requirements.txt``` This command installs the necessary Python packages specified in the requirements.txt file.
