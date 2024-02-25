@@ -92,8 +92,7 @@ def sign_my_tx(my_tx, private_key):
 
 
 def send_bnb(private_key, address_to, amount):
-    sender_address = Account.from_key(private_key)
-    sender_address = Web3.to_checksum_address(sender_address.address)
+    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
     transfer_tx = {
         "to": address_to,
         "value": amount,
