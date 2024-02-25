@@ -19,11 +19,11 @@ Claim Node Rewards: Automatically claim rewards for staked Nulink tokens.
 Send NLK Tokens to Node Wallets: Send Nulink tokens to node wallets for staking.
 
 Usage:
-Installation:
 
 Ensure Python is installed on your system.
 Clone this repository to your local machine.
 Install required packages using ```pip install -r requirements.txt```
+
 Configuration:
 
 Update private_main.txt with the private keys of your main wallets containing BNB for transactions.
@@ -31,7 +31,7 @@ Populate ethereum_wallet.txt with existing Ethereum wallet data or let the scrip
 Populate private_nulink.txt with private keys from Nulink wallets where staking is done.
 Execution:
 
-Run the script using python script_name.py.
+Run the script using python ```main.py```
 Follow the menu prompts to perform desired operations.
 Notes:
 Ensure you're connected to the Binance Smart Chain testnet network for executing transactions.
