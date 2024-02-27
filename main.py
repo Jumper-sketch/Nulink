@@ -116,12 +116,14 @@ def send_bnb(private_key, address_to, amount):
         return False
 
 
-def create_wallets(file_manager):
+def create_wallets(file_manager, count=None):
     existing_lines = file_manager.count_lines_in_file()
 
-    log.info("How many wallets do you need?:")
+    if count is None:
+        input_range = int(input("How many wallets do you need?: "))
+    else:
+        input_range = count
     try:
-        input_range = int(input())
         if input_range < 1 or input_range > 100:
             raise ValueError("Number of wallets must be a positive integer or 100 max")
 
@@ -139,26 +141,34 @@ def create_wallets(file_manager):
         log.error(f"Invalid input: {e}")
 
 
-def delete_wallets(file_manager):
-    confirm_delete = input("Are you sure you want to delete the wallets file? (y/n): ")
+def delete_wallets(file_manager, confirm=None):
+    if confirm is None:
+        confirm_delete = input(
+            "Are you sure you want to delete the wallets file? (y/n): "
+        )
+    else:
+        confirm_delete = confirm
     log.info(f"Confirm delete: {confirm_delete}")
 
     if confirm_delete.lower() == "y":
         log.info("User confirmed deletion.")
         file_manager.clear_file()
+        return True
     elif confirm_delete.lower() == "n":
         log.info("User cancelled deletion.")
+        return False
     else:
         log.warning("Invalid input. Please enter 'y' or 'n'.")
+        return False
 
 
-def send_bnb_to_wallets(file_manager, private_key):
+def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
     wallet_data = file_manager.get_all_wallet_data_from_file()
-    amount_str = input("Amount BNB to send: ")
     try:
-        amount = float(amount_str)
-        if amount <= 0:
-            raise ValueError("Amount must be a positive number")
+        if amount_default is None or amount_default <= 0:
+            amount = float(input("Amount BNB to send: "))
+        else:
+            amount = amount_default
     except ValueError:
         log.error("Invalid amount. Please enter a valid number.")
         return
@@ -167,7 +177,7 @@ def send_bnb_to_wallets(file_manager, private_key):
         amount_wei = Web3.to_wei(amount, "ether")
         log.info(f"{i}. {wallet['address']}")
         send_bnb(private_key, wallet["address"], amount_wei)
-        sleeping_time = random_time(5, 10)
+        sleeping_time = random_time(10, 20)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
@@ -437,6 +447,11 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
     wallet_new_data = file_manager.get_all_wallet_data_from_file()
     wallet_nulink_data = nulink_manager.get_all_wallet_data_from_file()
 
+    randomize_nulink = True  # False if not need random Nulink wallets
+
+    if randomize_nulink:
+        random.shuffle(wallet_nulink_data)
+
     for i, (new_wallet, nulink_wallet) in enumerate(
         zip(wallet_new_data, wallet_nulink_data), start=1
     ):
@@ -504,6 +519,18 @@ def approve_token_spending(private_key):
         return True
 
 
+def furystorm(file_manager, nulink_manager, private_key_main, furytimes):
+    count_wallets_create = int((nulink_manager.count_lines_in_file()))
+    for _ in range(furytimes):
+        delete_wallets(file_manager, "y")
+        create_wallets(file_manager, count_wallets_create)
+        send_bnb_to_wallets(file_manager, private_key_main, 0.002)
+        claim_faucet_to_wallets(file_manager)
+        send_nulink_to_wallets(file_manager, nulink_manager)
+        claim_rewards_wallets(nulink_manager)
+        stake_wallets(nulink_manager)
+
+
 def display_menu():
     log.info("1. Create wallets")
     log.info("2. Delete new wallets")
@@ -513,6 +540,7 @@ def display_menu():
     log.info("6. Stake Nulink")
     log.info("7. Claim rewards Node")
     log.info("8. Send NLK tokens to Node Wallets")
+    log.info("9. FuryStorm Attacker")
     log.info("\033[31m10. Exit\033[0m")
 
 
@@ -545,19 +573,24 @@ def main():
         log.error("Please add main wallet private key")
 
     options = {
-        "1": lambda: create_wallets(file_manager),
-        "2": lambda: delete_wallets(file_manager),
-        "3": lambda: send_bnb_to_wallets(file_manager, private_key_main),
+        "1": lambda: create_wallets(file_manager, None),
+        "2": lambda: delete_wallets(file_manager, None),
+        "3": lambda: send_bnb_to_wallets(file_manager, private_key_main, None),
         "4": lambda: claim_faucet_to_wallets(file_manager),
         "5": lambda: get_pending_user_reward_wallets(nulink_manager),
         "6": lambda: stake_wallets(nulink_manager),
         "7": lambda: claim_rewards_wallets(nulink_manager),
         "8": lambda: send_nulink_to_wallets(file_manager, nulink_manager),
+        "9": lambda: furystorm(
+            file_manager, nulink_manager, private_key_main, furytimes
+        ),
         "10": lambda: log.info("\033[31mExiting...\033[0m"),
     }
     while True:
         display_menu()
         choice = input("Enter your choice: ")
+        if choice == "9":
+            furytimes = int(input("How many times you need?: "))
         if not execute_option(choice, options):
             break
 
