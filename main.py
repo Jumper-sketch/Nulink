@@ -681,7 +681,7 @@ def main():
             file_manager, nulink_manager, private_key_main, furytimes
         ),
         "10": lambda: send_nulink_to_dead_wallets(nulink_manager, amount=None),
-        "11": lambda: log.info("\033[31mExiting...\033[0m"),
+        "11": lambda: exit(log.info("\033[31mExiting...\033[0m")),
     }
     while True:
         print()  # Add new line after funct
