@@ -6,6 +6,7 @@ import logging
 import json
 from colorlog import ColoredFormatter
 from colorama import Fore, Style
+from decimal import Decimal
 
 web3 = Web3(Web3.HTTPProvider("https://bsc-testnet.publicnode.com"))
 
@@ -43,6 +44,10 @@ class CustomLogger:
 
     def getLogger(self):
         return self.logger
+
+
+custom_logger = CustomLogger(level=logging.INFO)
+log = custom_logger.getLogger()
 
 
 class FileManager:
@@ -91,10 +96,6 @@ class FileManager:
                     continue
                 wallet_data_list.append(wallet_data)
         return wallet_data_list
-
-
-custom_logger = CustomLogger(level=logging.INFO)
-log = custom_logger.getLogger()
 
 
 def create_new_ethereum_wallet(name):
@@ -320,13 +321,25 @@ def get_token_balance_wallets(nulink_manager):
     nulink_token_address = contracts["nulink_token_address"]
     wallet_data = nulink_manager.get_all_wallet_data_from_file()
 
+    wallet_info = []
+
     for i, wallet in enumerate(wallet_data, start=1):
         sender_address = Web3.to_checksum_address(
             Account.from_key(wallet["private_key"]).address
         )
+        private_key_wallet = wallet["private_key"]
         balance_nulink_wei = get_token_balance(nulink_token_address, sender_address)
         balance_nulink = Web3.from_wei(balance_nulink_wei, "ether")
         log.info(f"{i}. {sender_address} : {balance_nulink} NLK")
+        wallet_info.append(
+            (
+                int(i),
+                sender_address,
+                float(balance_nulink),
+                private_key_wallet,
+            )
+        )
+    return wallet_info
 
 
 def stake(private_key):
@@ -455,7 +468,7 @@ def claim_rewards_wallets(file_manager):
             time.sleep(sleeping_time)
 
 
-def send_nulink(private_key_sender, address_to_send):
+def send_nulink(private_key_sender, address_to_send, amount_input=0):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
     with open("abi/erc20.json", mode="r", encoding="utf-8") as erc20_abi_file:
@@ -469,6 +482,11 @@ def send_nulink(private_key_sender, address_to_send):
     )
     amount = get_token_balance(my_contracts["nulink_token_address"], sender_address)
     amount_nulink = amount / 10**18
+
+    if amount_input != None:
+        amount_input = int(amount_input)
+        amount = Web3.to_wei(amount_input, "ether")
+
     if amount > 0:
         transfer_tx = contract.functions.transfer(address_to_send, amount)(
             address_to_send, amount
@@ -519,7 +537,7 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
 
         log.info(f"{i}.Try send from {new_wallet_bnb} to {nulink_wallet_node} 10 NLK")
 
-        send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node)
+        send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node, None)
         if send_checker:
             sleeping_time = random_time(35, 80)
             log.info(f"Wait {sleeping_time} second")
@@ -574,6 +592,26 @@ def approve_token_spending(private_key):
         return True
 
 
+def send_nulink_to_dead_wallets(nulink_manager, amount=None, number=None):
+    counts_wallets = get_token_balance_wallets(nulink_manager)
+    log.info("Please enter the number of the wallet to send NLK to dead: ")
+    number_dead = int(input())
+    log.info("Please enter the amount of NLK to send (1-10000): ")
+    amount_dead = int(input())
+    for i, sender_wallet, balance, private_key in counts_wallets:
+        if i == number_dead:
+            log.info(f"{i}. {sender_wallet}: {balance} NLK")
+            send_dead = send_nulink(
+                private_key, "0x000000000000000000000000000000000000dEaD", amount_dead
+            )
+            if send_dead:
+                log.info(
+                    f"Successfully sent {amount_dead} NLK from {sender_wallet} to dead wallet."
+                )
+            else:
+                log.error(f"Something wrong")
+
+
 def furystorm(file_manager, nulink_manager, private_key_main, furytimes):
     count_wallets_create = int((nulink_manager.count_lines_in_file()))
     for _ in range(furytimes):
@@ -597,7 +635,8 @@ def display_menu():
     log.info("7. Claim rewards Node")
     log.info("8. Send NLK tokens to Node Wallets")
     log.info("9. FuryStorm Attacker")
-    log.info("\033[31m10. Exit\033[0m")
+    log.info("\033[31m10. Send to dead wallet NLK\033[0m")
+    log.info("\033[31m11. Exit\033[0m")
 
 
 def execute_option(choice, options):
@@ -641,7 +680,10 @@ def main():
         "9": lambda: furystorm(
             file_manager, nulink_manager, private_key_main, furytimes
         ),
-        "10": lambda: log.info("\033[31mExiting...\033[0m"),
+        "10": lambda: send_nulink_to_dead_wallets(
+            nulink_manager, amount=None, number=None
+        ),
+        "11": lambda: log.info("\033[31mExiting...\033[0m"),
     }
     while True:
         print()  # Add new line after funct
