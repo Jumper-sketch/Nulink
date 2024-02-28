@@ -592,7 +592,7 @@ def approve_token_spending(private_key):
         return True
 
 
-def send_nulink_to_dead_wallets(nulink_manager, amount=None, number=None):
+def send_nulink_to_dead_wallets(nulink_manager, amount=None):
     counts_wallets = get_token_balance_wallets(nulink_manager)
     log.info("Please enter the number of the wallet to send NLK to dead: ")
     number_dead = int(input())
@@ -680,9 +680,7 @@ def main():
         "9": lambda: furystorm(
             file_manager, nulink_manager, private_key_main, furytimes
         ),
-        "10": lambda: send_nulink_to_dead_wallets(
-            nulink_manager, amount=None, number=None
-        ),
+        "10": lambda: send_nulink_to_dead_wallets(nulink_manager, amount=None),
         "11": lambda: log.info("\033[31mExiting...\033[0m"),
     }
     while True:
