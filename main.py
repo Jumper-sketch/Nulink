@@ -313,6 +313,22 @@ def get_token_balance(token_address, wallet_address):
     return balance
 
 
+def get_token_balance_wallets(nulink_manager):
+    with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
+        contracts = json.load(contracts)
+
+    nulink_token_address = contracts["nulink_token_address"]
+    wallet_data = nulink_manager.get_all_wallet_data_from_file()
+
+    for i, wallet in enumerate(wallet_data, start=1):
+        sender_address = Web3.to_checksum_address(
+            Account.from_key(wallet["private_key"]).address
+        )
+        balance_nulink_wei = get_token_balance(nulink_token_address, sender_address)
+        balance_nulink = Web3.from_wei(balance_nulink_wei, "ether")
+        log.info(f"{i}. {sender_address} : {balance_nulink} NLK")
+
+
 def stake(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
@@ -571,6 +587,7 @@ def furystorm(file_manager, nulink_manager, private_key_main, furytimes):
 
 
 def display_menu():
+    log.info("0. Check balance")
     log.info("1. Create wallets")
     log.info("2. Delete new wallets")
     log.info("3. Send BNB to new wallets from main")
@@ -612,6 +629,7 @@ def main():
         log.error("Please add main wallet private key")
 
     options = {
+        "0": lambda: get_token_balance_wallets(nulink_manager),
         "1": lambda: create_wallets(file_manager, None),
         "2": lambda: delete_wallets(file_manager, None),
         "3": lambda: send_bnb_to_wallets(file_manager, private_key_main, None),
@@ -626,6 +644,7 @@ def main():
         "10": lambda: log.info("\033[31mExiting...\033[0m"),
     }
     while True:
+        print()  # Add new line after funct
         display_menu()
         choice = input("Enter your choice: ")
         if choice == "9":
