@@ -293,9 +293,9 @@ def stake(private_key):
     log.info(f"Staking amount: {amount_nulink}")
 
     if amount_nulink > 1:
-        random_subtract = random.uniform(0.001, 0.1)
+        random_subtract = random.uniform(0, 0)
         amount -= int(random_subtract * 10**18)
-        log.info(f"Subtracted amount: {random_subtract}")
+        # log.info(f"Subtracted amount: {random_subtract}")
 
         nonce = web3.eth.get_transaction_count(sender_address)
 
