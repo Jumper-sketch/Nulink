@@ -1,13 +1,51 @@
 from eth_account import Account
-from loguru import logger as log
 from web3 import Web3
 import time
 import random
-import sys
+import logging
 import json
-
+from colorlog import ColoredFormatter
+from colorama import Fore, Style
 
 web3 = Web3(Web3.HTTPProvider("https://bsc-testnet.publicnode.com"))
+
+
+class CustomLogger:
+    def __init__(self, level=logging.INFO):
+        self.level = level
+
+        date_color = Fore.LIGHTBLACK_EX  # Szary kolor dla daty
+        reset_color = Style.RESET_ALL  # Resetowanie koloru
+
+        date_format = f"{date_color}%(asctime)s{reset_color} | %(log_color)s%(levelname)-8s%(reset)s | %(message)s"
+
+        # Ustawienie konfiguracji loggera z własnym formatem i kolorowaniem
+        self.formatter = ColoredFormatter(
+            date_format,
+            datefmt="%Y-%m-%d %H:%M:%S",
+            reset=True,
+            log_colors={
+                "DEBUG": "cyan",
+                "INFO": "green",
+                "WARNING": "yellow",
+                "ERROR": "red",
+                "CRITICAL": "red,bg_white",
+            },
+            secondary_log_colors={},
+            style="%",
+        )
+
+        # Dodanie handlera kolorującego
+        self.handler = logging.StreamHandler()
+        self.handler.setFormatter(self.formatter)
+
+        # Dodanie handlera do loggera
+        self.logger = logging.getLogger(__name__)
+        self.logger.addHandler(self.handler)
+        self.logger.setLevel(self.level)
+
+    def getLogger(self):
+        return self.logger
 
 
 class FileManager:
@@ -56,6 +94,10 @@ class FileManager:
                     continue
                 wallet_data_list.append(wallet_data)
         return wallet_data_list
+
+
+custom_logger = CustomLogger(level=logging.INFO)
+log = custom_logger.getLogger()
 
 
 def create_new_ethereum_wallet(name):
