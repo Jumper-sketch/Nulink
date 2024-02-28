@@ -14,12 +14,11 @@ class CustomLogger:
     def __init__(self, level=logging.INFO):
         self.level = level
 
-        date_color = Fore.LIGHTBLACK_EX  # Szary kolor dla daty
-        reset_color = Style.RESET_ALL  # Resetowanie koloru
+        date_color = Fore.LIGHTBLACK_EX
+        reset_color = Style.RESET_ALL
 
         date_format = f"{date_color}%(asctime)s{reset_color} | %(log_color)s%(levelname)-8s%(reset)s | %(message)s"
 
-        # Ustawienie konfiguracji loggera z własnym formatem i kolorowaniem
         self.formatter = ColoredFormatter(
             date_format,
             datefmt="%Y-%m-%d %H:%M:%S",
@@ -35,11 +34,9 @@ class CustomLogger:
             style="%",
         )
 
-        # Dodanie handlera kolorującego
         self.handler = logging.StreamHandler()
         self.handler.setFormatter(self.formatter)
 
-        # Dodanie handlera do loggera
         self.logger = logging.getLogger(__name__)
         self.logger.addHandler(self.handler)
         self.logger.setLevel(self.level)
