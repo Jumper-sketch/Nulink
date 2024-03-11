@@ -8,7 +8,7 @@ from colorlog import ColoredFormatter
 from colorama import Fore, Style
 from decimal import Decimal
 
-web3 = Web3(Web3.HTTPProvider("https://bsc-testnet.publicnode.com"))
+web3 = Web3(Web3.HTTPProvider("https://bsc-testnet.blockpi.network/v1/rpc/public"))
 
 
 class CustomLogger:
