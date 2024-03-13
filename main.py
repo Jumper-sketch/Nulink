@@ -98,6 +98,28 @@ class FileManager:
         return wallet_data_list
 
 
+def with_retry(max_retries=10, retry_interval=10):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            retries_left = max_retries
+            while retries_left > 0:
+                try:
+                    result = func(*args, **kwargs)
+                    if result:
+                        return result
+                    else:
+                        log.warning("Retrying...")
+                        time.sleep(retry_interval)
+                        retries_left -= 1
+                except Exception as e:
+                    log.error(f"Operation failed: {str(e)}")
+                    return False
+            log.error("Max retries reached, operation failed.")
+            return False
+        return wrapper
+    return decorator
+
+
 def create_new_ethereum_wallet(name):
     new_account = Account.create()
     address = new_account.address.strip()
@@ -142,7 +164,7 @@ def wait_for_transaction_confirmation(tx_hash):
     except Exception as e:
         return None
 
-
+@with_retry(max_retries=5, retry_interval=10)
 def send_bnb(private_key, address_to, amount, max_retries=10, retry_interval=10):
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
     nonce = web3.eth.get_transaction_count(sender_address)
@@ -160,31 +182,10 @@ def send_bnb(private_key, address_to, amount, max_retries=10, retry_interval=10)
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             log.info(f"Transaction hash: {tx_hash.hex()}")
-            
-            start_time = time.time()
-            while True:
-                if wait_for_transaction_confirmation(tx_hash):
-                    log.info("Transaction confirmed.")
-                    return tx_hash.hex()
-                
-                if time.time() - start_time > retry_interval:
-                    log.warning("Transaction confirmation timeout, retrying...")
-                    if max_retries > 0:
-                        return send_bnb(private_key, address_to, amount, max_retries - 1, retry_interval)
-                    else:
-                        log.error("Max retries reached, transaction failed.")
-                        return False
-                
-                time.sleep(2)
-                
+            return tx_hash.hex()
         except Exception as e:
             log.error(f"Transaction failed: {str(e)}")
-            if max_retries > 0:
-                log.warning("Retrying...")
-                return send_bnb(private_key, address_to, amount, max_retries - 1, retry_interval)
-            else:
-                log.error("Max retries reached, transaction failed.")
-                return False
+            return False
     else:
         log.error("Transaction signing failed.")
         return False
@@ -256,7 +257,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
-
+@with_retry(max_retries=5, retry_interval=10)
 def claim_faucet(sender_address, private_key):
     with open("abi/contracts.json", "r") as json_file:
         data = json.load(json_file)
@@ -376,7 +377,7 @@ def get_token_balance_wallets(nulink_manager):
         )
     return wallet_info
 
-
+@with_retry(max_retries=5, retry_interval=10)
 def stake(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
@@ -444,7 +445,7 @@ def stake_wallets(file_manager):
                 log.info(f"Wait {sleeping_time} second")
                 time.sleep(sleeping_time)
 
-
+@with_retry(max_retries=5, retry_interval=10)
 def claim_rewards(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
@@ -502,7 +503,7 @@ def claim_rewards_wallets(file_manager):
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
 
-
+@with_retry(max_retries=5, retry_interval=10)
 def send_nulink(private_key_sender, address_to_send, amount_input=0):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
@@ -578,7 +579,7 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
 
-
+@with_retry(max_retries=5, retry_interval=10)
 def approve_token_spending(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
@@ -626,7 +627,7 @@ def approve_token_spending(private_key):
     else:
         return True
 
-
+@with_retry(max_retries=5, retry_interval=5)
 def send_nulink_to_dead_wallets(nulink_manager, amount=None):
     counts_wallets = get_token_balance_wallets(nulink_manager)
     log.info("Please enter the number of the wallet to send NLK to dead: ")
