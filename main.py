@@ -164,8 +164,8 @@ def wait_for_transaction_confirmation(tx_hash):
     except Exception as e:
         return None
 
-@with_retry(max_retries=5, retry_interval=10)
-def send_bnb(private_key, address_to, amount, max_retries=10, retry_interval=10):
+@with_retry(max_retries=10, retry_interval=10)
+def send_bnb(private_key, address_to, amount):
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
     nonce = web3.eth.get_transaction_count(sender_address)
     transfer_tx = {
@@ -257,7 +257,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
-@with_retry(max_retries=5, retry_interval=10)
+@with_retry(max_retries=10, retry_interval=10)
 def claim_faucet(sender_address, private_key):
     with open("abi/contracts.json", "r") as json_file:
         data = json.load(json_file)
@@ -377,7 +377,7 @@ def get_token_balance_wallets(nulink_manager):
         )
     return wallet_info
 
-@with_retry(max_retries=5, retry_interval=10)
+@with_retry(max_retries=10, retry_interval=10)
 def stake(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
@@ -445,7 +445,7 @@ def stake_wallets(file_manager):
                 log.info(f"Wait {sleeping_time} second")
                 time.sleep(sleeping_time)
 
-@with_retry(max_retries=5, retry_interval=10)
+@with_retry(max_retries=10, retry_interval=10)
 def claim_rewards(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
@@ -503,7 +503,7 @@ def claim_rewards_wallets(file_manager):
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
 
-@with_retry(max_retries=5, retry_interval=10)
+@with_retry(max_retries=10, retry_interval=10)
 def send_nulink(private_key_sender, address_to_send, amount_input=0):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
@@ -579,7 +579,7 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
 
-@with_retry(max_retries=5, retry_interval=10)
+@with_retry(max_retries=10, retry_interval=10)
 def approve_token_spending(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
@@ -627,7 +627,7 @@ def approve_token_spending(private_key):
     else:
         return True
 
-@with_retry(max_retries=5, retry_interval=5)
+@with_retry(max_retries=10, retry_interval=5)
 def send_nulink_to_dead_wallets(nulink_manager, amount=None):
     counts_wallets = get_token_balance_wallets(nulink_manager)
     log.info("Please enter the number of the wallet to send NLK to dead: ")
