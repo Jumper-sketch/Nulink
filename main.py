@@ -112,9 +112,9 @@ def random_time(min, max):
 def sign_my_tx(my_tx, private_key):
     try:
         gas_limit = int(
-            web3.eth.estimate_gas(my_tx) * (1 + random.randint(1, 100) / 100)
+            web3.eth.estimate_gas(my_tx) * 1.3
         )
-        gas_price = int(web3.eth.gas_price * (1 + random.randint(1, 100) / 100))
+        gas_price = int(web3.eth.gas_price * 1.3)
 
         if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
             my_tx["gas"] = gas_limit
@@ -617,7 +617,7 @@ def furystorm(file_manager, nulink_manager, private_key_main, furytimes):
     for _ in range(furytimes):
         delete_wallets(file_manager, "y")
         create_wallets(file_manager, count_wallets_create)
-        send_bnb_to_wallets(file_manager, private_key_main, 0.002)
+        send_bnb_to_wallets(file_manager, private_key_main, 0.003)
         claim_faucet_to_wallets(file_manager)
         send_nulink_to_wallets(file_manager, nulink_manager)
         claim_rewards_wallets(nulink_manager)
