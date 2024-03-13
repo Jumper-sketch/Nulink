@@ -165,7 +165,7 @@ def wait_for_transaction_confirmation(tx_hash):
         return None
 
 @with_retry(max_retries=10, retry_interval=10)
-def send_bnb(private_key, address_to, amount):
+def send_bnb(private_key, address_to, amount, max_retries=3, retry_interval=10):
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
     nonce = web3.eth.get_transaction_count(sender_address)
     transfer_tx = {
@@ -182,10 +182,31 @@ def send_bnb(private_key, address_to, amount):
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             log.info(f"Transaction hash: {tx_hash.hex()}")
-            return tx_hash.hex()
+            
+            start_time = time.time()
+            while True:
+                if wait_for_transaction_confirmation(tx_hash):
+                    log.info("Transaction confirmed.")
+                    return tx_hash.hex()
+                
+                if time.time() - start_time > retry_interval:
+                    log.warning("Transaction confirmation timeout, retrying...")
+                    if max_retries > 0:
+                        return send_bnb(private_key, address_to, amount, max_retries - 1, retry_interval)
+                    else:
+                        log.error("Max retries reached, transaction failed.")
+                        return False
+                
+                time.sleep(2)
+                
         except Exception as e:
             log.error(f"Transaction failed: {str(e)}")
-            return False
+            if max_retries > 0:
+                log.warning("Retrying...")
+                return send_bnb(private_key, address_to, amount, max_retries - 1, retry_interval)
+            else:
+                log.error("Max retries reached, transaction failed.")
+                return False
     else:
         log.error("Transaction signing failed.")
         return False
@@ -428,7 +449,7 @@ def stake(private_key):
             return False
     else:
         log.info(f"Amount Nulink token is: {amount_nulink} NLK. Not need stake")
-        return False
+        return True, 0
 
 
 def stake_wallets(file_manager):
@@ -440,10 +461,12 @@ def stake_wallets(file_manager):
             log.info("Approve done.")
             sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
-            if stake_checker:
+            if stake_checker == True:
                 sleeping_time = random_time(20, 60)
                 log.info(f"Wait {sleeping_time} second")
                 time.sleep(sleeping_time)
+            else:
+                continue
 
 @with_retry(max_retries=10, retry_interval=10)
 def claim_rewards(private_key):
@@ -489,7 +512,7 @@ def claim_rewards(private_key):
         log.error(
             f"\033[93mWallet {sender_address} have only {get_rewards_pending} Nulink. Not need claim now\033[0m",
         )
-        return False
+        return False, 0
 
 
 def claim_rewards_wallets(file_manager):
@@ -498,10 +521,12 @@ def claim_rewards_wallets(file_manager):
     for i, wallet in enumerate(wallet_data, start=1):
 
         checker_claim = claim_rewards(wallet["private_key"])
-        if checker_claim:
+        if checker_claim == True:
             sleeping_time = random_time(10, 30)
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
+        else:
+            continue
 
 @with_retry(max_retries=10, retry_interval=10)
 def send_nulink(private_key_sender, address_to_send, amount_input=0):
@@ -550,6 +575,7 @@ def send_nulink(private_key_sender, address_to_send, amount_input=0):
             return False
     else:
         log.info(f"\033[91mAmount: {amount_nulink} NLK. Cannot send it\033[0m")
+        return True, 0
 
 
 def send_nulink_to_wallets(file_manager, nulink_manager):
@@ -574,12 +600,15 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
         log.info(f"{i}.Try send from {new_wallet_bnb} to {nulink_wallet_node} 10 NLK")
 
         send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node, None)
-        if send_checker:
-            sleeping_time = random_time(35, 80)
+        if send_checker == True:
+            sleeping_time = random_time(15, 30)
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
+        else:
+            continue
+        
 
-@with_retry(max_retries=10, retry_interval=10)
+@with_retry(max_retries=5, retry_interval=10)
 def approve_token_spending(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
@@ -627,7 +656,7 @@ def approve_token_spending(private_key):
     else:
         return True
 
-@with_retry(max_retries=10, retry_interval=5)
+@with_retry(max_retries=5, retry_interval=5)
 def send_nulink_to_dead_wallets(nulink_manager, amount=None):
     counts_wallets = get_token_balance_wallets(nulink_manager)
     log.info("Please enter the number of the wallet to send NLK to dead: ")
