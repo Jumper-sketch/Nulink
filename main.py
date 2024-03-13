@@ -112,9 +112,9 @@ def random_time(min, max):
 def sign_my_tx(my_tx, private_key):
     try:
         gas_limit = int(
-            web3.eth.estimate_gas(my_tx) * 1.3
+            web3.eth.estimate_gas(my_tx) * 1.6
         )
-        gas_price = int(web3.eth.gas_price * 1.3)
+        gas_price = int(web3.eth.gas_price * 1.6)
 
         if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
             my_tx["gas"] = gas_limit
@@ -129,6 +129,18 @@ def sign_my_tx(my_tx, private_key):
     except Exception as e:
         log.error(f"An unexpected error occurred: {e}")
     return None
+
+
+def wait_for_transaction_confirmation(tx_hash):
+    try:
+        receipt = None
+        while receipt is None:
+            receipt = web3.eth.get_transaction_receipt(tx_hash)
+            time.sleep(5)
+
+        return receipt
+    except Exception as e:
+        return None
 
 
 def send_bnb(private_key, address_to, amount):
@@ -147,13 +159,26 @@ def send_bnb(private_key, address_to, amount):
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             log.info(f"Transaction hash: {tx_hash.hex()}")
-            return tx_hash.hex()
+            
+            start_time = time.time()
+            while True:
+                if wait_for_transaction_confirmation(tx_hash):
+                    log.info("Transaction confirmed.")
+                    return tx_hash.hex()
+                
+                if time.time() - start_time > 60:
+                    log.warning("Transaction confirmation timeout, retrying...")
+                    return send_bnb(private_key, address_to, amount)
+                
+                time.sleep(2)
+                
         except Exception as e:
             log.error(f"Transaction failed: {str(e)}")
             return False
     else:
         log.error("Transaction signing failed.")
         return False
+
 
 
 def create_wallets(file_manager, count=None):
