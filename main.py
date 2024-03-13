@@ -136,21 +136,22 @@ def wait_for_transaction_confirmation(tx_hash):
         receipt = None
         while receipt is None:
             receipt = web3.eth.get_transaction_receipt(tx_hash)
-            time.sleep(5)
+            time.sleep(1)
 
         return receipt
     except Exception as e:
         return None
 
 
-def send_bnb(private_key, address_to, amount):
+def send_bnb(private_key, address_to, amount, max_retries=10, retry_interval=10):
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
+    nonce = web3.eth.get_transaction_count(sender_address)
     transfer_tx = {
         "to": address_to,
         "value": amount,
         "gas": 0,
         "gasPrice": 0,
-        "nonce": web3.eth.get_transaction_count(sender_address),
+        "nonce": nonce,
         "chainId": 97,
     }
 
@@ -166,15 +167,24 @@ def send_bnb(private_key, address_to, amount):
                     log.info("Transaction confirmed.")
                     return tx_hash.hex()
                 
-                if time.time() - start_time > 60:
+                if time.time() - start_time > retry_interval:
                     log.warning("Transaction confirmation timeout, retrying...")
-                    return send_bnb(private_key, address_to, amount)
+                    if max_retries > 0:
+                        return send_bnb(private_key, address_to, amount, max_retries - 1, retry_interval)
+                    else:
+                        log.error("Max retries reached, transaction failed.")
+                        return False
                 
                 time.sleep(2)
                 
         except Exception as e:
             log.error(f"Transaction failed: {str(e)}")
-            return False
+            if max_retries > 0:
+                log.warning("Retrying...")
+                return send_bnb(private_key, address_to, amount, max_retries - 1, retry_interval)
+            else:
+                log.error("Max retries reached, transaction failed.")
+                return False
     else:
         log.error("Transaction signing failed.")
         return False
