@@ -198,7 +198,7 @@ def send_bnb(private_key, address_to, amount, retry_interval=10, gas_limit_upper
         except Exception as e:
             if "already known" in str(e):
                 log.warning("Transaction already exists. Retrying...")
-                time.sleep(1)
+                time.sleep(3)
                 return send_bnb(private_key, address_to, amount, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
             else:
                 log.error(f"Transaction failed: {str(e)}")
