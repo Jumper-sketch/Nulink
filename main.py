@@ -108,7 +108,7 @@ def with_retry(max_retries=10, retry_interval=10):
                     if result:
                         return result
                     else:
-                        log.warning("Retrying...")
+                        #log.warning("Retrying...")
                         time.sleep(retry_interval)
                         retries_left -= 1
                 except Exception as e:
@@ -133,24 +133,83 @@ def random_time(min, max):
 
 def sign_my_tx(my_tx, private_key):
     try:
-        gas_limit = int(
-            web3.eth.estimate_gas(my_tx) * 1.6
-        )
         gas_price = int(web3.eth.gas_price * 1.6)
 
         if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
+            gas_limit = web3.eth.estimate_gas(my_tx)
             my_tx["gas"] = gas_limit
             my_tx["gasPrice"] = gas_price
 
-        signed_transaction = web3.eth.account.sign_transaction(
-            my_tx, private_key=private_key
-        )
+        signed_transaction = web3.eth.account.sign_transaction(my_tx, private_key=private_key)
         return signed_transaction
     except ValueError as e:
         log.error(f"Error signing transaction: {e}")
     except Exception as e:
         log.error(f"An unexpected error occurred: {e}")
     return None
+
+
+def is_duplicate_transaction(tx_hash):
+    # Sprawdź, czy istnieje już transakcja o podanym hashu w sieci
+    try:
+        transaction = web3.eth.get_transaction(tx_hash)
+        if transaction is not None:
+            return True
+        else:
+            return False
+    except Exception as e:
+        log.error(f"Error checking transaction: {str(e)}")
+        return False
+
+
+
+@with_retry(max_retries=10, retry_interval=10)
+def send_bnb(private_key, address_to, amount, retry_interval=10, gas_limit_upper_bound=0, gas_price_upper_bound=0):
+    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
+    nonce = web3.eth.get_transaction_count(sender_address)
+    
+    transfer_tx = {
+        "to": address_to,
+        "value": amount,
+        "gas": gas_limit_upper_bound or 0,
+        "gasPrice": gas_price_upper_bound or 0,
+        "nonce": nonce,
+        "chainId": 97,
+    }
+
+    signed_tx = sign_my_tx(transfer_tx, private_key)
+    if signed_tx is not None:
+        try:
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)            
+            start_time = time.time()
+            while True:
+                if wait_for_transaction_confirmation(tx_hash):
+                    log.info(f"Transaction confirmed. {tx_hash.hex()}")
+                    return True
+                
+                if time.time() - start_time > retry_interval:
+                    log.warning("Transaction confirmation timeout, retrying...")
+                    gas_limit_upper_bound *= 1.1
+                    gas_price_upper_bound *= 1.1
+                    return send_bnb(private_key, address_to, amount, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+                
+                time.sleep(1)
+                
+        except Exception as e:
+            if "already known" in str(e):
+                log.warning("Transaction already exists. Retrying...")
+                time.sleep(1)
+                return send_bnb(private_key, address_to, amount, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+            else:
+                log.error(f"Transaction failed: {str(e)}")
+                log.warning("Retrying...")
+                return send_bnb(private_key, address_to, amount, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+    else:
+        log.error("Transaction signing failed.")
+        return False
+
+
+
 
 
 def wait_for_transaction_confirmation(tx_hash):
@@ -163,53 +222,6 @@ def wait_for_transaction_confirmation(tx_hash):
         return receipt
     except Exception as e:
         return None
-
-@with_retry(max_retries=10, retry_interval=10)
-def send_bnb(private_key, address_to, amount, max_retries=3, retry_interval=10):
-    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
-    nonce = web3.eth.get_transaction_count(sender_address)
-    transfer_tx = {
-        "to": address_to,
-        "value": amount,
-        "gas": 0,
-        "gasPrice": 0,
-        "nonce": nonce,
-        "chainId": 97,
-    }
-
-    signed_tx = sign_my_tx(transfer_tx, private_key)
-    if signed_tx is not None:
-        try:
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            log.info(f"Transaction hash: {tx_hash.hex()}")
-            
-            start_time = time.time()
-            while True:
-                if wait_for_transaction_confirmation(tx_hash):
-                    log.info("Transaction confirmed.")
-                    return tx_hash.hex()
-                
-                if time.time() - start_time > retry_interval:
-                    log.warning("Transaction confirmation timeout, retrying...")
-                    if max_retries > 0:
-                        return send_bnb(private_key, address_to, amount, max_retries - 1, retry_interval)
-                    else:
-                        log.error("Max retries reached, transaction failed.")
-                        return False
-                
-                time.sleep(2)
-                
-        except Exception as e:
-            log.error(f"Transaction failed: {str(e)}")
-            if max_retries > 0:
-                log.warning("Retrying...")
-                return send_bnb(private_key, address_to, amount, max_retries - 1, retry_interval)
-            else:
-                log.error("Max retries reached, transaction failed.")
-                return False
-    else:
-        log.error("Transaction signing failed.")
-        return False
 
 
 
@@ -273,8 +285,8 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
     for i, wallet in enumerate(wallet_data, start=1):
         amount_wei = Web3.to_wei(amount, "ether")
         log.info(f"{i}. {wallet['address']}")
-        send_bnb(private_key, wallet["address"], amount_wei)
-        sleeping_time = random_time(10, 20)
+        send_bnb(private_key, wallet["address"], amount_wei,)
+        sleeping_time = random_time(1,1)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
