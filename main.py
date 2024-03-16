@@ -8,7 +8,7 @@ from colorlog import ColoredFormatter
 from colorama import Fore, Style
 from decimal import Decimal
 
-web3 = Web3(Web3.HTTPProvider("https://bsc-testnet.blockpi.network/v1/rpc/public"))
+web3 = Web3(Web3.HTTPProvider("https://endpoints.omniatech.io/v1/bsc/testnet/public"))
 
 
 class CustomLogger:
@@ -133,10 +133,10 @@ def random_time(min, max):
 
 def sign_my_tx(my_tx, private_key):
     try:
-        gas_price = int(web3.eth.gas_price * 1.6)
+        gas_price = int(web3.eth.gas_price)
 
         if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
-            gas_limit = web3.eth.estimate_gas(my_tx)
+            gas_limit = int(web3.eth.estimate_gas(my_tx) * 1.2)
             my_tx["gas"] = gas_limit
             my_tx["gasPrice"] = gas_price
 
@@ -148,18 +148,6 @@ def sign_my_tx(my_tx, private_key):
         log.error(f"An unexpected error occurred: {e}")
     return None
 
-
-def is_duplicate_transaction(tx_hash):
-    # Sprawdź, czy istnieje już transakcja o podanym hashu w sieci
-    try:
-        transaction = web3.eth.get_transaction(tx_hash)
-        if transaction is not None:
-            return True
-        else:
-            return False
-    except Exception as e:
-        log.error(f"Error checking transaction: {str(e)}")
-        return False
 
 
 
@@ -209,9 +197,6 @@ def send_bnb(private_key, address_to, amount, retry_interval=10, gas_limit_upper
         return False
 
 
-
-
-
 def wait_for_transaction_confirmation(tx_hash):
     try:
         receipt = None
@@ -222,7 +207,6 @@ def wait_for_transaction_confirmation(tx_hash):
         return receipt
     except Exception as e:
         return None
-
 
 
 def create_wallets(file_manager, count=None):
@@ -291,7 +275,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         time.sleep(sleeping_time)
 
 @with_retry(max_retries=3, retry_interval=3)
-def claim_faucet(sender_address, private_key):
+def claim_faucet(sender_address, private_key, retry_interval=10, gas_limit_upper_bound=0, gas_price_upper_bound=0):
     with open("abi/contracts.json", "r") as json_file:
         data = json.load(json_file)
     contract_address = data["contract_address"]
@@ -303,8 +287,8 @@ def claim_faucet(sender_address, private_key):
         "from": sender_address,
         "to": contract_address,
         "value": 0,
-        "gas": 0,
-        "gasPrice": 0,
+        "gas": gas_limit_upper_bound or 0,
+        "gasPrice": gas_price_upper_bound or 0,
         "nonce": web3.eth.get_transaction_count(sender_address),
         "data": data_to_send,
         "chainId": 97,
@@ -314,11 +298,28 @@ def claim_faucet(sender_address, private_key):
     if signed_tx is not None:
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            log.info(f"Transaction hash: {tx_hash.hex()}")
-            return tx_hash.hex()
+            start_time = time.time()
+            while True:
+                if wait_for_transaction_confirmation(tx_hash):
+                    log.info(f"Transaction confirmed. {tx_hash.hex()}")
+                    return True
+                
+                if time.time() - start_time > retry_interval:
+                    log.warning("Transaction confirmation timeout, retrying...")
+                    gas_limit_upper_bound *= 1.1
+                    gas_price_upper_bound *= 1.1
+                    return claim_faucet(sender_address, private_key, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+                
+                time.sleep(1)
         except Exception as e:
-            log.error(f"Transaction failed: {str(e)}")
-            return False
+            if "already known" in str(e):
+                log.warning("Transaction already exists. Retrying...")
+                time.sleep(3)  
+                return claim_faucet(sender_address, private_key, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)      
+            else:
+                log.error(f"Transaction failed: {str(e)}")
+                log.warning("Retrying...")
+                return claim_faucet(sender_address, private_key, retry_interval, gas_limit_upper_bound, gas_price_upper_bound) 
     else:
         log.error("Transaction signing failed.")
         return False
@@ -411,7 +412,7 @@ def get_token_balance_wallets(nulink_manager):
     return wallet_info
 
 @with_retry(max_retries=10, retry_interval=10)
-def stake(private_key):
+def stake(private_key, retry_interval=10, gas_limit_upper_bound=0, gas_price_upper_bound=0):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
     with open("abi/nulink.json", mode="r", encoding="utf-8") as json_file:
@@ -441,9 +442,9 @@ def stake(private_key):
         ).build_transaction(
             {
                 "from": sender_address,
-                "gas": 0,
+                "gas": gas_limit_upper_bound or 0,
                 "nonce": nonce,
-                "gasPrice": 0,
+                "gasPrice": gas_price_upper_bound or 0,
                 "chainId": 97,
             }
         )
@@ -474,13 +475,13 @@ def stake_wallets(file_manager):
             sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
             if stake_checker == True:
-                sleeping_time = random_time(20, 60)
+                sleeping_time = random_time(1, 3)
                 log.info(f"Wait {sleeping_time} second")
                 time.sleep(sleeping_time)
             else:
                 continue
 
-@with_retry(max_retries=10, retry_interval=10)
+@with_retry(max_retries=3, retry_interval=3)
 def claim_rewards(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
@@ -541,7 +542,7 @@ def claim_rewards_wallets(file_manager):
             continue
 
 @with_retry(max_retries=10, retry_interval=10)
-def send_nulink(private_key_sender, address_to_send, amount_input=0):
+def send_nulink(private_key_sender, address_to_send, amount_input, retry_interval = 5, gas_limit_upper_bound= 0, gas_price_upper_bound = 0):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
     with open("abi/erc20.json", mode="r", encoding="utf-8") as erc20_abi_file:
@@ -566,8 +567,8 @@ def send_nulink(private_key_sender, address_to_send, amount_input=0):
         ).build_transaction(
             {
                 "from": sender_address,
-                "gas": 0,
-                "gasPrice": 0,
+                "gas": gas_limit_upper_bound or 0,
+                "gasPrice": gas_price_upper_bound or 0,
                 "nonce": web3.eth.get_transaction_count(sender_address),
                 "chainId": 97,
             }
@@ -576,12 +577,28 @@ def send_nulink(private_key_sender, address_to_send, amount_input=0):
         signed_tx = sign_my_tx(transfer_tx, private_key_sender)
         if signed_tx is not None:
             try:
-                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-                log.info(f"Transaction hash: {tx_hash.hex()}")
-                return True
+                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)            
+                start_time = time.time()
+                while True:
+                    if wait_for_transaction_confirmation(tx_hash):
+                        log.info(f"Transaction confirmed. {tx_hash.hex()}")
+                        return True
+                    
+                    if time.time() - start_time > retry_interval:
+                        log.warning("Transaction confirmation timeout, retrying...")
+                        gas_limit_upper_bound *= 1.1
+                        gas_price_upper_bound *= 1.1
+                        return send_nulink(private_key_sender, address_to_send, amount_input, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+                    
             except Exception as e:
-                log.error(f"Transaction failed: {str(e)}")
-                return False
+                if "already known" in str(e):
+                    log.warning("Transaction already exists. Retrying...")
+                    time.sleep(3)
+                    return send_nulink(private_key_sender, address_to_send, amount_input, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+                else:
+                    log.error(f"Transaction failed: {str(e)}")
+                    log.warning("Retrying...")
+                    return send_nulink(private_key_sender, address_to_send, amount_input, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
         else:
             log.error("Transaction signing failed.")
             return False
@@ -613,7 +630,7 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
 
         send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node, None)
         if send_checker == True:
-            sleeping_time = random_time(15, 30)
+            sleeping_time = random_time(3, 5)
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
         else:
