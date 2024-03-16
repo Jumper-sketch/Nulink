@@ -290,7 +290,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
-@with_retry(max_retries=10, retry_interval=10)
+@with_retry(max_retries=3, retry_interval=3)
 def claim_faucet(sender_address, private_key):
     with open("abi/contracts.json", "r") as json_file:
         data = json.load(json_file)
@@ -331,7 +331,7 @@ def claim_faucet_to_wallets(file_manager):
     for i, wallet in enumerate(wallet_data, start=1):
         log.info(f"{i}. {wallet['address']}")
         claim_faucet(wallet["address"], wallet["private_key"])
-        sleeping_time = random_time(20, 50)
+        sleeping_time = random_time(1, 5)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
