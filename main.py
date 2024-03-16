@@ -143,17 +143,17 @@ def send_bnb(private_key, address_to, amount):
     }
 
     signed_tx = sign_my_tx(transfer_tx, private_key)
-    if signed_tx is not None:
-        try:
+    try:
+        if signed_tx is not None:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             log.info(f"Transaction hash: {tx_hash.hex()}")
             return tx_hash.hex()
-        except Exception as e:
-            log.error(f"Transaction failed: {str(e)}")
+        else:
+            log.error("Transaction signing failed.")
             return False
-    else:
-            log.error(f"Transaction signing failed. {str(e)}")
-            return False
+    except Exception as e:
+        log.error(f"Transaction failed: {str(e)}")
+        return False
 
 
 def create_wallets(file_manager, count=None):
