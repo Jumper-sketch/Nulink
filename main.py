@@ -129,7 +129,7 @@ def sign_my_tx(my_tx, private_key):
     return None
 
 
-def send_bnb(private_key, address_to, amount=0):
+def send_bnb(private_key, address_to, amount):
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
     nonce = web3.eth.get_transaction_count(sender_address)
     
@@ -152,7 +152,7 @@ def send_bnb(private_key, address_to, amount=0):
             log.error(f"Transaction failed: {str(e)}")
             return False
     else:
-            log.error("Transaction signing failed.")
+            log.error(f"Transaction signing failed. {str(e)}")
             return False
 
 
