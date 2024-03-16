@@ -473,14 +473,7 @@ def send_nulink(private_key_sender, address_to_send, amount_input):
             }
         )
 
-        signed_tx = sign_my_tx(transfer_tx, private_key_sender)
-        try:
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            log.info(f"Transaction hash: {tx_hash.hex()}")
-            return True
-        except Exception as e:
-            log.error(f"Transaction failed: {str(e)}")
-            return False
+        return sign_and_send_transaction(transfer_tx, private_key_sender)
     else:
         log.info(f"\033[91mAmount: {amount_nulink} NLK. Cannot send it\033[0m")
         return True, 0
@@ -548,18 +541,7 @@ def approve_token_spending(private_key):
                 "chainId": 97,
             }
         )
-        signed_tx = sign_my_tx(approve_tx, private_key)
-        if signed_tx is not None:
-            try:
-                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-                log.info(f"Transaction hash approve: {tx_hash.hex()}")
-                return True
-            except Exception as e:
-                log.error(f"Transaction failed: {str(e)}")
-                return False
-        else:
-            log.error(f"Transaction signing failed.")
-            return False
+        return sign_and_send_transaction(approve_tx, private_key)
     else:
         return True
 
