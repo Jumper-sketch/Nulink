@@ -184,6 +184,7 @@ def send_bnb(private_key, address_to, amount, retry_interval=10, gas_limit_upper
                 time.sleep(1)
                 
         except Exception as e:
+            log.error(f"An error occurred: {str(e)}")
             if "already known" in str(e):
                 log.warning("Transaction already exists. Retrying...")
                 time.sleep(3)
@@ -270,7 +271,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         amount_wei = Web3.to_wei(amount, "ether")
         log.info(f"{i}. {wallet['address']}")
         send_bnb(private_key, wallet["address"], amount_wei,)
-        sleeping_time = random_time(1,1)
+        sleeping_time = random_time(1,3)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
