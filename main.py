@@ -129,8 +129,6 @@ def sign_my_tx(my_tx, private_key):
     return None
 
 
-
-
 def send_bnb(private_key, address_to, amount=0):
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
     nonce = web3.eth.get_transaction_count(sender_address)
@@ -485,6 +483,7 @@ def claim_rewards_wallets(file_manager):
         else:
             continue
 
+
 def send_nulink(private_key_sender, address_to_send, amount_input):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
@@ -606,6 +605,7 @@ def approve_token_spending(private_key):
             return False
     else:
         return True
+
 
 def send_nulink_to_dead_wallets(nulink_manager, amount=None):
     counts_wallets = get_token_balance_wallets(nulink_manager)
