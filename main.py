@@ -262,7 +262,7 @@ def claim_faucet_to_wallets(file_manager):
     for i, wallet in enumerate(wallet_data, start=1):
         log.info(f"{i}. {wallet['address']}")
         claim_faucet(wallet["address"], wallet["private_key"])
-        sleeping_time = random_time(1, 5)
+        sleeping_time = random_time(5, 10)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
@@ -465,7 +465,7 @@ def claim_rewards_wallets(file_manager):
 
         checker_claim = claim_rewards(wallet["private_key"])
         if checker_claim == True:
-            sleeping_time = random_time(10, 30)
+            sleeping_time = random_time(10, 15)
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
         else:
@@ -540,7 +540,7 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
 
         send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node, None)
         if send_checker == True:
-            sleeping_time = random_time(3, 5)
+            sleeping_time = random_time(5, 15)
             log.info(f"Wait {sleeping_time} second")
             time.sleep(sleeping_time)
         else:
