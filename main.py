@@ -98,27 +98,6 @@ class FileManager:
         return wallet_data_list
 
 
-def with_retry(max_retries=10, retry_interval=10):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            retries_left = max_retries
-            while retries_left > 0:
-                try:
-                    result = func(*args, **kwargs)
-                    if result:
-                        return result
-                    else:
-                        log.warning("Retrying...")
-                        time.sleep(retry_interval)
-                        retries_left -= 1
-                except Exception as e:
-                    log.error(f"Operation failed: {str(e)}")
-                    retries_left -= 1
-            log.error("Max retries reached, operation failed.")
-            return False
-        return wrapper
-    return decorator
-
 
 
 def create_new_ethereum_wallet(name):
@@ -446,7 +425,7 @@ def stake_wallets(file_manager):
             else:
                 continue
 
-@with_retry(max_retries=3, retry_interval=3)
+
 def claim_rewards(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
@@ -581,7 +560,6 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
             continue
         
 
-@with_retry(max_retries=5, retry_interval=10)
 def approve_token_spending(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
@@ -629,7 +607,6 @@ def approve_token_spending(private_key):
     else:
         return True
 
-@with_retry(max_retries=5, retry_interval=5)
 def send_nulink_to_dead_wallets(nulink_manager, amount=None):
     counts_wallets = get_token_balance_wallets(nulink_manager)
     log.info("Please enter the number of the wallet to send NLK to dead: ")
