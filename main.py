@@ -111,6 +111,21 @@ def random_time(min, max):
     return random.randint(min, max)
 
 
+def sign_and_send_transaction(transfer_tx, private_key):
+    signed_tx = sign_my_tx(transfer_tx, private_key)
+    if signed_tx is not None:
+        try:
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            log.info(f"Transaction hash: {tx_hash.hex()}")
+            return True
+        except Exception as e:
+            log.error(f"Transaction failed: {str(e)}")
+            return False
+    else:
+        log.error("Transaction signing failed.")
+        return False
+
+
 def sign_my_tx(my_tx, private_key):
     try:
         gas_price = int(web3.eth.gas_price)
@@ -126,7 +141,6 @@ def sign_my_tx(my_tx, private_key):
         log.error(f"Error signing transaction: {e}")
     except Exception as e:
         log.error(f"An unexpected error occurred: {e}")
-    return None
 
 
 def send_bnb(private_key, address_to, amount):
@@ -142,19 +156,7 @@ def send_bnb(private_key, address_to, amount):
         "chainId": 97,
     }
 
-    signed_tx = sign_my_tx(transfer_tx, private_key)
-    try:
-        if signed_tx is not None:
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            log.info(f"Transaction hash: {tx_hash.hex()}")
-            return tx_hash.hex()
-        else:
-            log.error("Transaction signing failed.")
-            return False
-    except Exception as e:
-        log.error(f"Transaction failed: {str(e)}")
-        return False
-
+    return sign_and_send_transaction(transfer_tx, private_key)
 
 def create_wallets(file_manager, count=None):
     existing_lines = file_manager.count_lines_in_file()
@@ -217,7 +219,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         amount_wei = Web3.to_wei(amount, "ether")
         log.info(f"{i}. {wallet['address']}")
         send_bnb(private_key, wallet["address"], amount_wei,)
-        sleeping_time = random_time(5,12)
+        sleeping_time = random_time(5, 12)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
@@ -241,18 +243,7 @@ def claim_faucet(sender_address, private_key):
         "chainId": 97,
     }
 
-    signed_tx = sign_my_tx(transaction_faucet, private_key)
-    if signed_tx is not None:
-        try:
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            log.info(f"Transaction hash: {tx_hash.hex()}")
-            return tx_hash.hex()
-        except Exception as e:
-            log.error(f"Transaction failed: {str(e)}")
-            return False
-    else:
-            log.error("Transaction signing failed.")
-            return False
+    return sign_and_send_transaction(transaction_faucet, private_key)
 
 
 def claim_faucet_to_wallets(file_manager):
@@ -378,18 +369,7 @@ def stake(private_key):
                 "chainId": 97,
             }
         )
-        signed_tx = sign_my_tx(stake_tx, private_key)
-        if signed_tx is not None:
-            try:
-                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-                log.info(f"Transaction hash: {tx_hash.hex()}")
-                return tx_hash.hex()
-            except Exception as e:
-                log.error(f"Transaction failed: {str(e)}")
-                return False
-        else:
-            log.error("Transaction signing failed.")
-            return False
+        return sign_and_send_transaction(stake_tx, private_key)
     else:
         log.info(f"Amount Nulink token is: {amount_nulink} NLK. Not need stake")
         return True, 0
@@ -405,7 +385,7 @@ def stake_wallets(file_manager):
             sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
             if stake_checker == True:
-                sleeping_time = random_time(1, 3)
+                sleeping_time = random_time(3, 5)
                 log.info(f"Wait {sleeping_time} second")
                 time.sleep(sleeping_time)
             else:
@@ -439,18 +419,7 @@ def claim_rewards(private_key):
                 "chainId": 97,
             }
         )
-        signed_tx = sign_my_tx(claim_tx, private_key)
-        if signed_tx is not None:
-            try:
-                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-                log.info(f"Transaction hash: {tx_hash.hex()}")
-                return tx_hash.hex()
-            except Exception as e:
-                log.error(f"Transaction failed: {str(e)}")
-                return False
-        else:
-            log.error(f"Transaction signing failed.")
-            return False
+        return sign_and_send_transaction(claim_tx, private_key)
     else:
         log.error(
             f"\033[93mWallet {sender_address} have only {get_rewards_pending} Nulink. Not need claim now\033[0m",
