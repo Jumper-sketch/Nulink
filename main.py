@@ -152,15 +152,15 @@ def sign_my_tx(my_tx, private_key):
 
 
 
-def send_bnb(private_key, address_to, amount, retry_interval=10, gas_limit_upper_bound=0, gas_price_upper_bound=0):
+def send_bnb(private_key, address_to, amount=0):
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
     nonce = web3.eth.get_transaction_count(sender_address)
     
     transfer_tx = {
         "to": address_to,
         "value": amount,
-        "gas": gas_limit_upper_bound or 0,
-        "gasPrice": gas_price_upper_bound or 0,
+        "gas": 0,
+        "gasPrice": 0,
         "nonce": nonce,
         "chainId": 97,
     }
@@ -168,34 +168,15 @@ def send_bnb(private_key, address_to, amount, retry_interval=10, gas_limit_upper
     signed_tx = sign_my_tx(transfer_tx, private_key)
     if signed_tx is not None:
         try:
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)            
-            start_time = time.time()
-            while True:
-                if wait_for_transaction_confirmation(tx_hash):
-                    log.info(f"Transaction confirmed. {tx_hash.hex()}")
-                    return True
-                
-                if time.time() - start_time > retry_interval:
-                    log.info("Transaction confirmation timeout, retrying...")
-                    gas_limit_upper_bound *= 1.1
-                    gas_price_upper_bound *= 1.1
-                    raise Exception("Retry")  # Raise exception to trigger retry in decorator
-                
-                time.sleep(1)
-                
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            log.info(f"Transaction hash: {tx_hash.hex()}")
+            return True
         except Exception as e:
-            log.info(f"An error occurred: {str(e)}")
-            if "already known" in str(e):
-                log.warning("Transaction already exists. Retrying...")
-                time.sleep(3)
-                raise Exception("Retry")  # Raise exception to trigger retry in decorator
-            else:
-                log.warning(f"Transaction failed: {str(e)}")
-                log.warning("Retrying...")
-                raise Exception("Retry")  # Raise exception to trigger retry in decorator
+            log.error(f"Transaction failed: {str(e)}")
+            return False
     else:
-        log.error("Transaction signing failed.")
-        return False
+            log.error("Transaction signing failed.")
+            return False
 
 
 def wait_for_transaction_confirmation(tx_hash):
@@ -299,31 +280,14 @@ def claim_faucet(sender_address, private_key, retry_interval=10, gas_limit_upper
     if signed_tx is not None:
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            start_time = time.time()
-            while True:
-                if wait_for_transaction_confirmation(tx_hash):
-                    log.info(f"Transaction confirmed. {tx_hash.hex()}")
-                    return True
-                
-                if time.time() - start_time > retry_interval:
-                    log.warning("Transaction confirmation timeout, retrying...")
-                    gas_limit_upper_bound *= 1.1
-                    gas_price_upper_bound *= 1.1
-                    return claim_faucet(sender_address, private_key, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
-                
-                time.sleep(1)
+            log.info(f"Transaction hash: {tx_hash.hex()}")
+            return True
         except Exception as e:
-            if "already known" in str(e):
-                log.warning("Transaction already exists. Retrying...")
-                time.sleep(3)  
-                return claim_faucet(sender_address, private_key, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)      
-            else:
-                log.error(f"Transaction failed: {str(e)}")
-                log.warning("Retrying...")
-                return claim_faucet(sender_address, private_key, retry_interval, gas_limit_upper_bound, gas_price_upper_bound) 
+            log.error(f"Transaction failed: {str(e)}")
+            return False
     else:
-        log.error("Transaction signing failed.")
-        return False
+            log.error("Transaction signing failed.")
+            return False
 
 
 def claim_faucet_to_wallets(file_manager):
@@ -575,32 +539,12 @@ def send_nulink(private_key_sender, address_to_send, amount_input, retry_interva
         )
 
         signed_tx = sign_my_tx(transfer_tx, private_key_sender)
-        if signed_tx is not None:
-            try:
-                tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)            
-                start_time = time.time()
-                while True:
-                    if wait_for_transaction_confirmation(tx_hash):
-                        log.info(f"Transaction confirmed. {tx_hash.hex()}")
-                        return True
-                    
-                    if time.time() - start_time > retry_interval:
-                        log.warning("Transaction confirmation timeout, retrying...")
-                        gas_limit_upper_bound *= 1.1
-                        gas_price_upper_bound *= 1.1
-                        return send_nulink(private_key_sender, address_to_send, amount_input, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
-                    
-            except Exception as e:
-                if "already known" in str(e):
-                    log.warning("Transaction already exists. Retrying...")
-                    time.sleep(3)
-                    return send_nulink(private_key_sender, address_to_send, amount_input, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
-                else:
-                    log.error(f"Transaction failed: {str(e)}")
-                    log.warning("Retrying...")
-                    return send_nulink(private_key_sender, address_to_send, amount_input, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
-        else:
-            log.error("Transaction signing failed.")
+        try:
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            log.info(f"Transaction hash: {tx_hash.hex()}")
+            return True
+        except Exception as e:
+            log.error(f"Transaction failed: {str(e)}")
             return False
     else:
         log.info(f"\033[91mAmount: {amount_nulink} NLK. Cannot send it\033[0m")
