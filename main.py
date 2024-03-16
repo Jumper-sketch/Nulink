@@ -236,7 +236,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         time.sleep(sleeping_time)
 
 
-def claim_faucet(sender_address, private_key, retry_interval=10, gas_limit_upper_bound=0, gas_price_upper_bound=0):
+def claim_faucet(sender_address, private_key):
     with open("abi/contracts.json", "r") as json_file:
         data = json.load(json_file)
     contract_address = data["contract_address"]
@@ -248,8 +248,8 @@ def claim_faucet(sender_address, private_key, retry_interval=10, gas_limit_upper
         "from": sender_address,
         "to": contract_address,
         "value": 0,
-        "gas": gas_limit_upper_bound or 0,
-        "gasPrice": gas_price_upper_bound or 0,
+        "gas": 0,
+        "gasPrice": 0,
         "nonce": web3.eth.get_transaction_count(sender_address),
         "data": data_to_send,
         "chainId": 97,
@@ -356,7 +356,7 @@ def get_token_balance_wallets(nulink_manager):
     return wallet_info
 
 
-def stake(private_key, gas_limit_upper_bound=0, gas_price_upper_bound=0):
+def stake(private_key):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
     with open("abi/nulink.json", mode="r", encoding="utf-8") as json_file:
@@ -386,9 +386,9 @@ def stake(private_key, gas_limit_upper_bound=0, gas_price_upper_bound=0):
         ).build_transaction(
             {
                 "from": sender_address,
-                "gas": gas_limit_upper_bound or 0,
+                "gas": 0,
                 "nonce": nonce,
-                "gasPrice": gas_price_upper_bound or 0,
+                "gasPrice": 0,
                 "chainId": 97,
             }
         )
@@ -485,7 +485,7 @@ def claim_rewards_wallets(file_manager):
         else:
             continue
 
-def send_nulink(private_key_sender, address_to_send, amount_input, retry_interval = 5, gas_limit_upper_bound= 0, gas_price_upper_bound = 0):
+def send_nulink(private_key_sender, address_to_send, amount_input):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
     with open("abi/erc20.json", mode="r", encoding="utf-8") as erc20_abi_file:
@@ -510,8 +510,8 @@ def send_nulink(private_key_sender, address_to_send, amount_input, retry_interva
         ).build_transaction(
             {
                 "from": sender_address,
-                "gas": gas_limit_upper_bound or 0,
-                "gasPrice": gas_price_upper_bound or 0,
+                "gas": 0,
+                "gasPrice": 0,
                 "nonce": web3.eth.get_transaction_count(sender_address),
                 "chainId": 97,
             }
