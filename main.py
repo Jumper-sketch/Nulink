@@ -147,7 +147,7 @@ def send_bnb(private_key, address_to, amount):
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             log.info(f"Transaction hash: {tx_hash.hex()}")
-            return True
+            return tx_hash.hex()
         except Exception as e:
             log.error(f"Transaction failed: {str(e)}")
             return False
@@ -246,7 +246,7 @@ def claim_faucet(sender_address, private_key):
         try:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
             log.info(f"Transaction hash: {tx_hash.hex()}")
-            return True
+            return tx_hash.hex()
         except Exception as e:
             log.error(f"Transaction failed: {str(e)}")
             return False
@@ -383,7 +383,7 @@ def stake(private_key):
             try:
                 tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
                 log.info(f"Transaction hash: {tx_hash.hex()}")
-                return True
+                return tx_hash.hex()
             except Exception as e:
                 log.error(f"Transaction failed: {str(e)}")
                 return False
