@@ -108,16 +108,17 @@ def with_retry(max_retries=10, retry_interval=10):
                     if result:
                         return result
                     else:
-                        #log.warning("Retrying...")
+                        log.warning("Retrying...")
                         time.sleep(retry_interval)
                         retries_left -= 1
                 except Exception as e:
                     log.error(f"Operation failed: {str(e)}")
-                    return False
+                    retries_left -= 1
             log.error("Max retries reached, operation failed.")
             return False
         return wrapper
     return decorator
+
 
 
 def create_new_ethereum_wallet(name):
@@ -151,7 +152,6 @@ def sign_my_tx(my_tx, private_key):
 
 
 
-@with_retry(max_retries=10, retry_interval=10)
 def send_bnb(private_key, address_to, amount, retry_interval=10, gas_limit_upper_bound=0, gas_price_upper_bound=0):
     sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
     nonce = web3.eth.get_transaction_count(sender_address)
@@ -176,23 +176,23 @@ def send_bnb(private_key, address_to, amount, retry_interval=10, gas_limit_upper
                     return True
                 
                 if time.time() - start_time > retry_interval:
-                    log.warning("Transaction confirmation timeout, retrying...")
+                    log.info("Transaction confirmation timeout, retrying...")
                     gas_limit_upper_bound *= 1.1
                     gas_price_upper_bound *= 1.1
-                    return send_bnb(private_key, address_to, amount, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+                    raise Exception("Retry")  # Raise exception to trigger retry in decorator
                 
                 time.sleep(1)
                 
         except Exception as e:
-            log.error(f"An error occurred: {str(e)}")
+            log.info(f"An error occurred: {str(e)}")
             if "already known" in str(e):
                 log.warning("Transaction already exists. Retrying...")
                 time.sleep(3)
-                return send_bnb(private_key, address_to, amount, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+                raise Exception("Retry")  # Raise exception to trigger retry in decorator
             else:
-                log.error(f"Transaction failed: {str(e)}")
+                log.warning(f"Transaction failed: {str(e)}")
                 log.warning("Retrying...")
-                return send_bnb(private_key, address_to, amount, retry_interval, gas_limit_upper_bound, gas_price_upper_bound)
+                raise Exception("Retry")  # Raise exception to trigger retry in decorator
     else:
         log.error("Transaction signing failed.")
         return False
@@ -275,7 +275,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
-@with_retry(max_retries=3, retry_interval=3)
+
 def claim_faucet(sender_address, private_key, retry_interval=10, gas_limit_upper_bound=0, gas_price_upper_bound=0):
     with open("abi/contracts.json", "r") as json_file:
         data = json.load(json_file)
@@ -412,8 +412,8 @@ def get_token_balance_wallets(nulink_manager):
         )
     return wallet_info
 
-@with_retry(max_retries=10, retry_interval=10)
-def stake(private_key, retry_interval=10, gas_limit_upper_bound=0, gas_price_upper_bound=0):
+
+def stake(private_key, gas_limit_upper_bound=0, gas_price_upper_bound=0):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts:
         contracts = json.load(contracts)
     with open("abi/nulink.json", mode="r", encoding="utf-8") as json_file:
@@ -542,7 +542,6 @@ def claim_rewards_wallets(file_manager):
         else:
             continue
 
-@with_retry(max_retries=10, retry_interval=10)
 def send_nulink(private_key_sender, address_to_send, amount_input, retry_interval = 5, gas_limit_upper_bound= 0, gas_price_upper_bound = 0):
     with open("abi/contracts.json", mode="r", encoding="utf-8") as contracts_file:
         my_contracts = json.load(contracts_file)
