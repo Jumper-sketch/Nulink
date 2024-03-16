@@ -156,18 +156,6 @@ def send_bnb(private_key, address_to, amount=0):
             return False
 
 
-def wait_for_transaction_confirmation(tx_hash):
-    try:
-        receipt = None
-        while receipt is None:
-            receipt = web3.eth.get_transaction_receipt(tx_hash)
-            time.sleep(1)
-
-        return receipt
-    except Exception as e:
-        return None
-
-
 def create_wallets(file_manager, count=None):
     existing_lines = file_manager.count_lines_in_file()
 
@@ -229,7 +217,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         amount_wei = Web3.to_wei(amount, "ether")
         log.info(f"{i}. {wallet['address']}")
         send_bnb(private_key, wallet["address"], amount_wei,)
-        sleeping_time = random_time(1,3)
+        sleeping_time = random_time(5,12)
         log.info(f"Wait {sleeping_time} second")
         time.sleep(sleeping_time)
 
