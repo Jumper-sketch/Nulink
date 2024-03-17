@@ -379,7 +379,8 @@ def stake_wallets(file_manager):
             log.info("Approve done.")
             sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
-            if stake_checker == True:
+            print(stake_checker)
+            if stake_checker is not None:
                 sleeping_time = random_time(3, 5)
                 log.info(f"Wait {sleeping_time} second")
                 time.sleep(sleeping_time)
@@ -526,7 +527,7 @@ def approve_token_spending(private_key):
     if allowance_amount < amount:
         nonce = web3.eth.get_transaction_count(sender_address)
         approve_tx = contract.functions.approve(
-            spender_address, 2**256 - 1
+            spender_address, 2**256 - 5
         ).build_transaction(
             {
                 "from": sender_address,
