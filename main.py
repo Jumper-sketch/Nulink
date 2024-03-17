@@ -379,7 +379,6 @@ def stake_wallets(file_manager):
             log.info("Approve done.")
             sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
-            print(stake_checker)
             if stake_checker is not None:
                 sleeping_time = random_time(3, 5)
                 log.info(f"Wait {sleeping_time} second")
