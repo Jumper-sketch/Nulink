@@ -144,15 +144,13 @@ def sign_my_tx(my_tx, private_key):
 
 
 def send_bnb(private_key, address_to, amount):
-    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
-    nonce = web3.eth.get_transaction_count(sender_address)
     
     transfer_tx = {
         "to": address_to,
         "value": amount,
         "gas": 0,
         "gasPrice": 0,
-        "nonce": nonce,
+        "nonce": web3.eth.get_transaction_count(Web3.to_checksum_address(Account.from_key(private_key).address)),
         "chainId": 97,
     }
 
@@ -227,18 +225,15 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
 def claim_faucet(sender_address, private_key):
     with open("abi/contracts.json", "r") as json_file:
         data = json.load(json_file)
-    contract_address = data["contract_address"]
-
-    sender_address = Web3.to_checksum_address(Account.from_key(private_key).address)
 
     data_to_send = f"0xee42b5c7000000000000000000000000{sender_address[2:].lower()}000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000001300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013000000000000000000000000000000000000000000000000000000000000000"
     transaction_faucet = {
         "from": sender_address,
-        "to": contract_address,
+        "to": data["contract_address"],
         "value": 0,
         "gas": 0,
         "gasPrice": 0,
-        "nonce": web3.eth.get_transaction_count(sender_address),
+        "nonce": web3.eth.get_transaction_count(Web3.to_checksum_address(Account.from_key(private_key).address)),
         "data": data_to_send,
         "chainId": 97,
     }
