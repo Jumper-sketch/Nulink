@@ -566,6 +566,7 @@ def furystorm(file_manager, nulink_manager, private_key_main, furytimes):
     for _ in range(furytimes):
         delete_wallets(file_manager, "y")
         create_wallets(file_manager, count_wallets_create)
+        time.sleep(3)
         send_bnb_to_wallets(file_manager, private_key_main, 0.0008)
         claim_faucet_to_wallets(file_manager)
         send_nulink_to_wallets(file_manager, nulink_manager)
