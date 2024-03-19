@@ -129,11 +129,11 @@ def sign_and_send_transaction(transfer_tx, private_key):
 def sign_my_tx(my_tx, private_key):
     try:
         gas_price = int(web3.eth.gas_price)
-        if isinstance(my_tx, dict):
-            if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
-                gas_limit = int(web3.eth.estimate_gas(my_tx))
-                my_tx["gas"] = gas_limit
-                my_tx["gasPrice"] = gas_price
+        gas_limit = web3.eth.estimate_gas(my_tx)
+        
+        if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
+            my_tx["gas"] = gas_limit
+            my_tx["gasPrice"] = gas_price
 
         signed_transaction = web3.eth.account.sign_transaction(my_tx, private_key=private_key)
         return signed_transaction
