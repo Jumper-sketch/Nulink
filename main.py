@@ -128,19 +128,23 @@ def sign_and_send_transaction(transfer_tx, private_key):
 
 def sign_my_tx(my_tx, private_key):
     try:
-        gas_price = int(web3.eth.gas_price)
-        gas_limit = web3.eth.estimate_gas(my_tx)
+        gas_price = web3.eth.gas_price
+        gas_limit = my_tx.get("gas")
         
-        if my_tx.get("gas") == 0 and my_tx.get("gasPrice") == 0:
-            my_tx["gas"] = gas_limit
-            my_tx["gasPrice"] = gas_price
+        if gas_limit is None or gas_limit <= 0:
+            gas_limit = int(web3.eth.estimate_gas(my_tx) * 1.1)
+            if gas_limit <= 0:
+                gas_limit = 21000  # Default gas limit
             
-        if my_tx.get("gas") and my_tx.get("gasPrice"):
-            signed_transaction = web3.eth.account.sign_transaction(my_tx, private_key=private_key)
-            return signed_transaction
-        else:
-            log.error("Invalid gas or gasPrice value")
+        if gas_price <= 0:
+            log.error("Invalid gasPrice value")
             return None
+        
+        my_tx["gas"] = gas_limit
+        my_tx["gasPrice"] = gas_price
+        
+        signed_transaction = web3.eth.account.sign_transaction(my_tx, private_key=private_key)
+        return signed_transaction
     except ValueError as e:
         log.error(f"Error signing transaction: {e}")
         return None
@@ -149,14 +153,15 @@ def sign_my_tx(my_tx, private_key):
         return None
 
 
+
 def send_bnb(private_key, address_to, amount):
-    
+    nonce = web3.eth.get_transaction_count(Web3.to_checksum_address(Account.from_key(private_key).address))
     transfer_tx = {
         "to": address_to,
         "value": amount,
         "gas": 0,
         "gasPrice": 0,
-        "nonce": web3.eth.get_transaction_count(Web3.to_checksum_address(Account.from_key(private_key).address)),
+        "nonce": nonce,
         "chainId": 97,
     }
 
@@ -220,7 +225,7 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
         return
 
     for i, wallet in enumerate(wallet_data, start=1):
-        amount_wei = Web3.to_wei(amount, "ether")
+        amount_wei = int(Web3.to_wei(amount, "ether"))
         log.info(f"{i}. {wallet['address']}")
         send_bnb(private_key, wallet["address"], amount_wei,)
         sleeping_time = random_time(5, 12)
@@ -252,7 +257,6 @@ def claim_faucet_to_wallets(file_manager):
     wallet_data = file_manager.get_all_wallet_data_from_file()
 
     for i, wallet in enumerate(wallet_data, start=1):
-        log.info(f"{i}. {wallet['address']}")
         checker = claim_faucet(wallet["address"], wallet["private_key"])
         if checker:
             sleeping_time = random_time(5, 10)
