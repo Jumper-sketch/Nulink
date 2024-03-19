@@ -129,7 +129,7 @@ def sign_and_send_transaction(transfer_tx, private_key):
 def sign_my_tx(my_tx, private_key):
     try:
         gas_price = int(web3.eth.gas_price)
-        gas_limit = web3.eth.estimate_gas(my_tx)
+        gas_limit = int(web3.eth.estimate_gas(my_tx))
         
         if my_tx.get("gas") == 0 and my_tx.get("gasPrice") == 0:
             my_tx["gas"] = gas_limit
