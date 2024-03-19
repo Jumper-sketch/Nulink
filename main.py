@@ -131,16 +131,23 @@ def sign_my_tx(my_tx, private_key):
         gas_price = int(web3.eth.gas_price)
         gas_limit = web3.eth.estimate_gas(my_tx)
         
-        if my_tx["gas"] == 0 and my_tx["gasPrice"] == 0:
+        if my_tx.get("gas") == 0 and my_tx.get("gasPrice") == 0:
             my_tx["gas"] = gas_limit
             my_tx["gasPrice"] = gas_price
-
-        signed_transaction = web3.eth.account.sign_transaction(my_tx, private_key=private_key)
-        return signed_transaction
+            
+        # Sprawdź, czy wartości gas i gasPrice są różne od zera i None
+        if my_tx.get("gas") and my_tx.get("gasPrice"):
+            signed_transaction = web3.eth.account.sign_transaction(my_tx, private_key=private_key)
+            return signed_transaction
+        else:
+            log.error("Invalid gas or gasPrice value")
+            return None
     except ValueError as e:
         log.error(f"Error signing transaction: {e}")
+        return None
     except Exception as e:
         log.error(f"An unexpected error occurred: {e}")
+        return None
 
 
 def send_bnb(private_key, address_to, amount):
