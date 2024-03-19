@@ -135,7 +135,6 @@ def sign_my_tx(my_tx, private_key):
             my_tx["gas"] = gas_limit
             my_tx["gasPrice"] = gas_price
             
-        # Sprawdź, czy wartości gas i gasPrice są różne od zera i None
         if my_tx.get("gas") and my_tx.get("gasPrice"):
             signed_transaction = web3.eth.account.sign_transaction(my_tx, private_key=private_key)
             return signed_transaction
