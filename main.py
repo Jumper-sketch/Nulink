@@ -8,8 +8,24 @@ from colorlog import ColoredFormatter
 from colorama import Fore, Style
 from decimal import Decimal
 
-web3 = Web3(Web3.HTTPProvider("https://endpoints.omniatech.io/v1/bsc/testnet/public"))
 
+def check_and_return_active_rpc(rpc_urls):
+
+    for rpc_url in rpc_urls:
+        web3 = Web3(Web3.HTTPProvider(rpc_url))
+        if web3.is_connected():
+            return web3
+    return None
+
+rpc_urls = [
+    "https://data-seed-prebsc-2-s2.bnbchain.org:8545",
+    "https://bsc-testnet-rpc.publicnode.com",
+    "https://bsc-testnet.blockpi.network/v1/rpc/public",
+    "https://endpoints.omniatech.io/v1/bsc/testnet/public"
+]
+
+
+web3 = check_and_return_active_rpc(rpc_urls)
 
 class CustomLogger:
     def __init__(self, level=logging.INFO):
