@@ -115,8 +115,8 @@ def sign_and_send_transaction(transfer_tx, private_key):
     signed_tx = sign_my_tx(transfer_tx, private_key)
     if signed_tx is not None:
         try:
-            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            log.info(f"Transaction hash: {tx_hash.hex()}")
+            web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            #log.info(f"Transaction hash: {tx_hash.hex()}")
             return True
         except Exception as e:
             log.error(f"Transaction failed: {str(e)}")
@@ -254,10 +254,13 @@ def claim_faucet_to_wallets(file_manager):
 
     for i, wallet in enumerate(wallet_data, start=1):
         log.info(f"{i}. {wallet['address']}")
-        claim_faucet(wallet["address"], wallet["private_key"])
-        sleeping_time = random_time(5, 10)
-        log.info(f"Wait {sleeping_time} second")
-        time.sleep(sleeping_time)
+        checker = claim_faucet(wallet["address"], wallet["private_key"])
+        if checker:
+            sleeping_time = random_time(5, 10)
+            log.info(f"{i}. {wallet['address']} claimed $NLK and wait {sleeping_time}")
+            time.sleep(sleeping_time)
+        else:
+            continue
 
 
 def get_pending_user_reward(private_key):
@@ -500,12 +503,11 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
             Account.from_key(new_wallet["private_key"]).address
         )
 
-        log.info(f"{i}.Try send from {new_wallet_bnb} to {nulink_wallet_node} 10 NLK")
 
         send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node, None)
         if send_checker == True:
-            sleeping_time = random_time(5, 15)
-            log.info(f"Wait {sleeping_time} second")
+            sleeping_time = random_time(5, 15)            
+            log.info(f"{i}.Try send from {new_wallet_bnb} to {nulink_wallet_node} 10 NLK and wait {sleeping_time} second")
             time.sleep(sleeping_time)
         else:
             continue
