@@ -115,8 +115,8 @@ def sign_and_send_transaction(transfer_tx, private_key):
     signed_tx = sign_my_tx(transfer_tx, private_key)
     if signed_tx is not None:
         try:
-            web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            #log.info(f"Transaction hash: {tx_hash.hex()}")
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            log.info(f"Transaction hash: {tx_hash.hex()}")
             return True
         except Exception as e:
             log.error(f"Transaction failed: {str(e)}")
@@ -129,7 +129,7 @@ def sign_and_send_transaction(transfer_tx, private_key):
 def sign_my_tx(my_tx, private_key):
     try:
         gas_price = int(web3.eth.gas_price)
-        gas_limit = int(web3.eth.estimate_gas(my_tx))
+        gas_limit = web3.eth.estimate_gas(my_tx)
         
         if my_tx.get("gas") == 0 and my_tx.get("gasPrice") == 0:
             my_tx["gas"] = gas_limit
@@ -385,8 +385,8 @@ def stake_wallets(file_manager):
     for i, wallet in enumerate(wallet_data, start=1):
         approve = approve_token_spending(wallet["private_key"])
         if approve:
-            log.info("Approve done.")
-            sleeping_time = random_time(10, 20)
+            #log.info("Approve done.")
+            #sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
             if stake_checker is not None:
                 sleeping_time = random_time(3, 5)
