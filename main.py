@@ -127,17 +127,27 @@ def random_time(min, max):
 
 
 def sign_and_send_transaction(transfer_tx, private_key):
-    signed_tx = sign_my_tx(transfer_tx, private_key)
-    if signed_tx is not None:
-        try:
+    try:
+        signed_tx = sign_my_tx(transfer_tx, private_key)
+        if signed_tx is not None:
             tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            log.info(f"Transaction hash: {tx_hash.hex()}")
-            return True
-        except Exception as e:
-            log.error(f"Transaction failed: {str(e)}")
+            log.info(f"Transaction sent. Hash: {tx_hash.hex()}")
+            
+            tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+            if tx_receipt.status == 1:
+                log.info("Transaction successful.")
+                return True
+            else:
+                log.error("Transaction failed. Reverted.")
+                return False
+        else:
+            log.error("Transaction signing failed.")
             return False
-    else:
-        log.error("Transaction signing failed.")
+    except ValueError as e:
+        log.error(f"Error signing or sending transaction: {e}")
+        return False
+    except Exception as e:
+        log.error(f"An unexpected error occurred: {e}")
         return False
 
 
@@ -147,13 +157,13 @@ def sign_my_tx(my_tx, private_key):
         gas_limit = my_tx.get("gas")
         
         if gas_limit is None or gas_limit <= 0:
-            gas_limit = int(web3.eth.estimate_gas(my_tx) * 1.1)
+            gas_limit = web3.eth.estimate_gas(my_tx)
             if gas_limit <= 0:
-                gas_limit = 21000  # Default gas limit
+                raise ValueError("Gas estimation failed or returned non-positive value")
+            gas_limit = int(gas_limit * 1.1)
             
         if gas_price <= 0:
-            log.error("Invalid gasPrice value")
-            return None
+            raise ValueError("Invalid gasPrice value")
         
         my_tx["gas"] = gas_limit
         my_tx["gasPrice"] = gas_price
