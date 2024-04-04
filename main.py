@@ -179,8 +179,9 @@ def sign_my_tx(my_tx, private_key):
 
 
 
-def send_bnb(private_key, address_to, amount):
-    nonce = web3.eth.get_transaction_count(Web3.to_checksum_address(Account.from_key(private_key).address))
+def send_bnb(private_key, address_to, amount, nonce):
+    #nonce = web3.eth.get_transaction_count(Web3.to_checksum_address(Account.from_key(private_key).address))
+    nonce = nonce
     transfer_tx = {
         "to": address_to,
         "value": amount,
@@ -240,6 +241,7 @@ def delete_wallets(file_manager, confirm=None):
 
 def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
     wallet_data = file_manager.get_all_wallet_data_from_file()
+    nonce = web3.eth.get_transaction_count(Web3.to_checksum_address(Account.from_key(private_key).address))
     try:
         if amount_default is None or amount_default <= 0:
             amount = float(input("Amount BNB to send: "))
@@ -252,10 +254,11 @@ def send_bnb_to_wallets(file_manager, private_key, amount_default=None):
     for i, wallet in enumerate(wallet_data, start=1):
         amount_wei = int(Web3.to_wei(amount, "ether"))
         log.info(f"{i}. {wallet['address']}")
-        send_bnb(private_key, wallet["address"], amount_wei,)
-        sleeping_time = random_time(5, 12)
-        log.info(f"Wait {sleeping_time} second")
-        time.sleep(sleeping_time)
+        send_bnb(private_key, wallet["address"], amount_wei, nonce)
+        nonce += 1  # Increment nonce
+        #sleeping_time = random_time(5, 12)
+        log.info(f"Wait 0 second")
+        #time.sleep(sleeping_time)
 
 
 def claim_faucet(sender_address, private_key):
@@ -284,9 +287,9 @@ def claim_faucet_to_wallets(file_manager):
     for i, wallet in enumerate(wallet_data, start=1):
         checker = claim_faucet(wallet["address"], wallet["private_key"])
         if checker:
-            sleeping_time = random_time(5, 10)
-            log.info(f"{i}. {wallet['address']} claimed $NLK and wait {sleeping_time}")
-            time.sleep(sleeping_time)
+            #sleeping_time = random_time(5, 10)
+            log.info(f"{i}. {wallet['address']} claimed $NLK and wait 0 second")
+            #time.sleep(sleeping_time)
         else:
             continue
 
@@ -418,9 +421,9 @@ def stake_wallets(file_manager):
             #sleeping_time = random_time(10, 20)
             stake_checker = stake(wallet["private_key"])
             if stake_checker is not None:
-                sleeping_time = random_time(3, 5)
-                log.info(f"Wait {sleeping_time} second")
-                time.sleep(sleeping_time)
+                #sleeping_time = random_time(3, 5)
+                log.info(f"Wait 0 second")
+                #time.sleep(sleeping_time)
             else:
                 continue
 
@@ -467,9 +470,9 @@ def claim_rewards_wallets(file_manager):
 
         checker_claim = claim_rewards(wallet["private_key"])
         if checker_claim == True:
-            sleeping_time = random_time(10, 15)
-            log.info(f"Wait {sleeping_time} second")
-            time.sleep(sleeping_time)
+            #sleeping_time = random_time(10, 15)
+            log.info(f"Wait 0 second")
+            #time.sleep(sleeping_time)
         else:
             continue
 
@@ -534,9 +537,9 @@ def send_nulink_to_wallets(file_manager, nulink_manager):
 
         send_checker = send_nulink(new_wallet["private_key"], nulink_wallet_node, None)
         if send_checker == True:
-            sleeping_time = random_time(5, 15)            
-            log.info(f"{i}.Try send from {new_wallet_bnb} to {nulink_wallet_node} 10 NLK and wait {sleeping_time} second")
-            time.sleep(sleeping_time)
+            #sleeping_time = random_time(5, 15)            
+            log.info(f"{i}.Try send from {new_wallet_bnb} to {nulink_wallet_node} 10 NLK and wait 0 second")
+            #time.sleep(sleeping_time)
         else:
             continue
         
@@ -603,8 +606,7 @@ def furystorm(file_manager, nulink_manager, private_key_main, furytimes):
     for _ in range(furytimes):
         delete_wallets(file_manager, "y")
         create_wallets(file_manager, count_wallets_create)
-        time.sleep(3)
-        send_bnb_to_wallets(file_manager, private_key_main, 0.002)
+        send_bnb_to_wallets(file_manager, private_key_main, 0.001)
         claim_faucet_to_wallets(file_manager)
         send_nulink_to_wallets(file_manager, nulink_manager)
         claim_rewards_wallets(nulink_manager)
